@@ -1,61 +1,47 @@
 #include <grpcpp/grpcpp.h>
 
-#include <charconv>
-#include <chrono>
-#include <cstdint>
+#include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <string>
-#include <string_view>
-#include <system_error>
 
-#include "objectstore.grpc.pb.h"
+#include "client/client.h"
 
 int main(int argc, char* argv[]) {
-  if (argc < 4 || !((std::string_view(argv[2]) == "get" && argc == 4) ||
-                    (std::string_view(argv[2]) == "put" && argc == 5))) {
-    std::cerr << "Usage: client <mgm_address> get <object_id>\n"
-                 "       client <mgm_address> put <object_id> <size_bytes>\n";
+  if (argc < 2) {
+    std::cerr << "Usage: client put <file> <object_id> | get <object_id> "
+                 "<out_file> | rm <object_id>\n"
+                 "FST_ADDRESS defaults to 127.0.0.1:50052\n";
     return 2;
   }
-  std::uint64_t size_bytes = 0;
-  if (argc == 5) {
-    const std::string_view size_arg(argv[4]);
-    const auto [end, error] = std::from_chars(
-        size_arg.data(), size_arg.data() + size_arg.size(), size_bytes);
-    if (error != std::errc{} || end != size_arg.data() + size_arg.size()) {
-      std::cerr << "size_bytes must be an unsigned 64-bit integer\n";
-      return 2;
-    }
+  const std::string command = argv[1];
+  if (!((command == "put" || command == "get") && argc == 4) &&
+      !(command == "rm" && argc == 3)) {
+    std::cerr << "Invalid command or argument count\n";
+    return 2;
   }
-  auto stub = objectstore::v1::MgmService::NewStub(
-      grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials()));
-  grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() +
-                       std::chrono::seconds(5));
-  context.set_wait_for_ready(true);
-  grpc::Status status;
-  if (std::string_view(argv[2]) == "get") {
-    objectstore::v1::GetRequest request;
-    request.set_object_id(argv[3]);
-    objectstore::v1::GetResponse response;
-    status = stub->Get(&context, request, &response);
-    if (status.ok()) {
-      std::cout << response.DebugString();
+  try {
+    const char* configured = std::getenv("FST_ADDRESS");
+    const std::string address = configured ? configured : "127.0.0.1:50052";
+    objectstore::ObjectClient client(
+        grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
+    grpc::Status status;
+    if (command == "put") {
+      status = client.Put(argv[2], argv[3]);
+    } else if (command == "get") {
+      status = client.Get(argv[2], argv[3]);
+    } else {
+      status = client.Remove(argv[2]);
     }
-  } else {
-    objectstore::v1::PutRequest request;
-    request.set_object_id(argv[3]);
-    request.set_size_bytes(size_bytes);
-    objectstore::v1::PutResponse response;
-    status = stub->Put(&context, request, &response);
-    if (status.ok()) {
-      std::cout << response.DebugString();
+    if (!status.ok()) {
+      std::cerr << "RPC status " << status.error_code() << ": "
+                << status.error_message() << '\n';
+      return 1;
     }
-  }
-  std::cout << "RPC status " << status.error_code() << ": "
-            << status.error_message() << '\n';
-  if (status.ok()) {
+    std::cout << command << " OK\n";
     return 0;
+  } catch (const std::exception& error) {
+    std::cerr << "client: " << error.what() << '\n';
+    return 1;
   }
-  return status.error_code() == grpc::StatusCode::UNIMPLEMENTED ? 3 : 1;
 }

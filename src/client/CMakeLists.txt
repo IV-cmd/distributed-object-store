@@ -1,2 +1,6 @@
+add_library(objectstore_client client.cc)
+target_include_directories(objectstore_client PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(objectstore_client PUBLIC objectstore_proto objectstore_common)
+
 add_executable(client main.cc)
-target_link_libraries(client PRIVATE objectstore_proto)
+target_link_libraries(client PRIVATE objectstore_client)
