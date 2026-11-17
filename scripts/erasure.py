@@ -20,7 +20,8 @@ def main():
         cluster.compose("exec", "-T", "mgm", "sh", "-c",
                         f"printf '\\000' > {source}; head -c 5242886 /dev/urandom >> {source}")
         cluster.client("put", source, "rs-pairs", "rs42")
-        initial = cluster.wait_rs("rs-pairs", 12)
+        cluster.wait_rs("rs-pairs", 12)
+        initial = cluster.chunks("rs-pairs")
         for begin in range(0, len(initial), 6):
             if len({row["checksum"] for row in initial[begin:begin + 6]}) != 6:
                 raise AssertionError("proof requires six distinct fragment hashes")
@@ -43,8 +44,8 @@ def main():
         cluster.client("rm", "rs-pairs")
 
         cluster.client("put", source, "rs-corrupt", "rs42")
-        cluster.compose("exec", "-T", "fst2", "sh", "-c",
-                        "printf '\\377' | dd of=/var/lib/objectstore/rs-corrupt/1.chunk "
+        cluster.compose("exec", "-T", "fst1", "sh", "-c",
+                        "printf '\\377' | dd of=/var/lib/objectstore/rs-corrupt/0.chunk "
                         "bs=1 count=1 conv=notrunc status=none")
         assert verified_read(cluster, source, "rs-corrupt", "/tmp/rs-output")
         cluster.client("rm", "rs-corrupt")
