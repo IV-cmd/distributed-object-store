@@ -1,0 +1,8 @@
+/build*/
+/cmake-build-*/
+*.pb.cc
+*.pb.h
+compile_commands.json
+.cache/
+.idea/
+.vscode/
