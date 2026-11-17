@@ -18,7 +18,7 @@ def main():
     with Cluster("erasure", nodes=6) as cluster:
         source = "/tmp/rs-input-unaligned"
         cluster.compose("exec", "-T", "mgm", "sh", "-c",
-                        f"head -c 5242887 /dev/urandom > {source}")
+                        f"printf '\\000' > {source}; head -c 5242886 /dev/urandom >> {source}")
         cluster.client("put", source, "rs-pairs", "rs42")
         initial = cluster.wait_rs("rs-pairs", 12)
         for begin in range(0, len(initial), 6):
