@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package objectstore.v1;
+
+import "google/protobuf/empty.proto";
+
+service MgmService {
+  rpc Put(PutRequest) returns (PutResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (google.protobuf.Empty);
+  rpc ReportChunkStatus(ReportChunkStatusRequest) returns (google.protobuf.Empty);
+}
+
+service FstService {
+  rpc WriteChunk(WriteChunkRequest) returns (google.protobuf.Empty);
+  rpc ReadChunk(ReadChunkRequest) returns (ReadChunkResponse);
+  rpc DeleteChunk(DeleteChunkRequest) returns (google.protobuf.Empty);
+  rpc Scrub(google.protobuf.Empty) returns (ScrubResponse);
+}
+
+message ChunkId {
+  string object_id = 1;
+  uint32 index = 2;
+}
+
+message NodeInfo {
+  string node_id = 1;
+  string endpoint = 2;
+}
+
+message ChunkLocation {
+  ChunkId chunk = 1;
+  NodeInfo node = 2;
+}
+
+message PlacementPlan {
+  repeated ChunkLocation chunks = 1;
+}
+
+message ChunkStatus {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    HEALTHY = 1;
+    MISSING = 2;
+    CORRUPT = 3;
+  }
+  ChunkId chunk = 1;
+  State state = 2;
+}
+
+message PutRequest {
+  string object_id = 1;
+  uint64 size_bytes = 2;
+}
+
+message PutResponse {
+  PlacementPlan plan = 1;
+}
+
+message GetRequest {
+  string object_id = 1;
+}
+
+message GetResponse {
+  PlacementPlan plan = 1;
+}
+
+message RegisterNodeRequest {
+  NodeInfo node = 1;
+}
+
+message RegisterNodeResponse {
+  bool accepted = 1;
+}
+
+message HeartbeatRequest {
+  string node_id = 1;
+}
+
+message ReportChunkStatusRequest {
+  string node_id = 1;
+  repeated ChunkStatus chunks = 2;
+}
+
+message WriteChunkRequest {
+  ChunkId chunk = 1;
+  bytes data = 2;
+}
+
+message ReadChunkRequest {
+  ChunkId chunk = 1;
+}
+
+message ReadChunkResponse {
+  bytes data = 1;
+}
+
+message DeleteChunkRequest {
+  ChunkId chunk = 1;
+}
+
+message ScrubResponse {
+  repeated ChunkStatus chunks = 1;
+}
