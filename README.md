@@ -7,7 +7,7 @@ The metadata server (MGM) and storage nodes (FSTs) follow the broad separation
 used by CERN EOS. This independent project is not CERN EOS or an affiliated
 implementation.
 
-**M0 only: build skeleton + gRPC plumbing + CI. Not a working object store.**
+**Foundation only: build skeleton + gRPC plumbing + CI. Not a working object store.**
 No objects, metadata, or node registrations are persisted. The title describes
 the intended project, not implemented storage features.
 
@@ -36,7 +36,7 @@ not yet call FSTs or choose chunk placements.
 - Protobuf messages and generated gRPC stubs under package `objectstore.v1`.
 - MGM `RegisterNode`: validates nonempty node ID/endpoint, logs, and acknowledges.
   It does **not** maintain a node registry or check endpoint reachability.
-- MGM `Get`/`Put`: return gRPC `UNIMPLEMENTED` (code 12) with an M0 message.
+- MGM `Get`/`Put`: return gRPC `UNIMPLEMENTED` (code 12) with an explicit message.
 - MGM `Heartbeat`/`ReportChunkStatus` and all FST methods: generated
   `UNIMPLEMENTED` handlers. No storage, scrubbing, or liveness tracking.
 - Each FST serves its RPC interface and registers once on startup. Registration
@@ -103,7 +103,7 @@ docker compose exec -T mgm client mgm:50051 get example
 docker compose exec -T mgm client mgm:50051 put example 42
 ```
 
-Each command prints `RPC status 12: ... is not implemented in M0` and exits 3.
+Each command prints `RPC status 12: ... is not implemented yet` and exits 3.
 That is an intentional RPC response, **not** a successful object operation.
 CLI exit codes: 0 = OK, 1 = other RPC error, 2 = invalid usage, 3 = UNIMPLEMENTED.
 
@@ -159,7 +159,7 @@ git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build-lint
 - Fault injection: killed nodes, corrupted chunks, and network delays
 - Benchmarks: throughput, rebuild time, and degraded-read latency
 
-Later milestones will be specified individually. No durability, availability,
-performance, or EOS compatibility claims are made at M0.
+Later features will be specified individually. No durability, availability,
+performance, or EOS compatibility claims are made by the current skeleton.
 
 MIT licensed; see [LICENSE](LICENSE).

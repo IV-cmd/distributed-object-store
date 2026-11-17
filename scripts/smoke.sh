@@ -34,7 +34,7 @@ check_unimplemented() {
   printf '%s\n' "$output"
   [[ "$status" -eq 3 ]]
   grep -Fq 'RPC status 12:' <<< "$output"
-  grep -Fq 'not implemented in M0' <<< "$output"
+  grep -Fq 'not implemented yet' <<< "$output"
 }
 
 check_unimplemented get example

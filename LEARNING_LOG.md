@@ -1,21 +1,21 @@
 # Learning log
 
-## M0
+## Build foundation
 
 Build skeleton, gRPC plumbing, containers, and CI. No storage logic.
 
-## M1
+## Single-node storage
 
-Not started; scope to be specified.
 
-## M2
 
-Not started; scope to be specified.
+## Metadata and placement
 
-## M3
 
-Not started; scope to be specified.
 
-## M4
+## Redundant layouts
 
-Not started; scope to be specified.
+
+
+## Integrity and recovery
+
+

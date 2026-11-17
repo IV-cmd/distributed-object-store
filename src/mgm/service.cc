@@ -23,12 +23,12 @@ grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
 
 grpc::Status MgmService::Get(grpc::ServerContext*, const v1::GetRequest*,
                              v1::GetResponse*) {
-  return {grpc::StatusCode::UNIMPLEMENTED, "Get is not implemented in M0"};
+  return {grpc::StatusCode::UNIMPLEMENTED, "Get is not implemented yet"};
 }
 
 grpc::Status MgmService::Put(grpc::ServerContext*, const v1::PutRequest*,
                              v1::PutResponse*) {
-  return {grpc::StatusCode::UNIMPLEMENTED, "Put is not implemented in M0"};
+  return {grpc::StatusCode::UNIMPLEMENTED, "Put is not implemented yet"};
 }
 
 }  // namespace objectstore
