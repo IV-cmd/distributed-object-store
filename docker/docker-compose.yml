@@ -42,6 +42,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     profiles: [tools]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     environment:
       MGM_ADDRESS: mgm:50051
     volumes:

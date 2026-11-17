@@ -13,6 +13,10 @@ add_executable(storage_tests storage_test.cc)
 target_link_libraries(storage_tests PRIVATE fst_service objectstore_client GTest::gtest_main)
 gtest_discover_tests(storage_tests PROPERTIES TIMEOUT 30)
 
-add_executable(metadata_tests metadata_test.cc placement_test.cc replication_test.cc)
+add_executable(metadata_tests metadata_test.cc placement_test.cc)
 target_link_libraries(metadata_tests PRIVATE mgm_service GTest::gtest_main)
 gtest_discover_tests(metadata_tests PROPERTIES TIMEOUT 10)
+
+add_executable(replication_tests replication_test.cc)
+target_link_libraries(replication_tests PRIVATE mgm_service fst_service objectstore_client GTest::gtest_main)
+gtest_discover_tests(replication_tests PROPERTIES TIMEOUT 30)

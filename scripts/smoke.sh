@@ -24,7 +24,7 @@ done
 client() {
   "${compose[@]}" exec -T mgm env MGM_ADDRESS=mgm:50051 client "$@"
 }
-"${compose[@]}" exec -T mgm python3 -c 'from pathlib import Path; Path("/tmp/input").write_bytes(bytes(range(256)) * 8192 + b"replica-tail")'
+"${compose[@]}" exec -T mgm sh -c 'dd if=/dev/zero of=/tmp/input bs=1048576 count=2 && printf "replica-tail" >> /tmp/input'
 client put /tmp/input sample
 metadata=$(client stat sample)
 printf '%s\n' "$metadata"
@@ -46,9 +46,21 @@ for node in fst1 fst2 fst3; do
   degraded=$("${compose[@]}" exec -T mgm md5sum "/tmp/output-$node" | cut -d' ' -f1)
   [[ "$before" == "$degraded" ]]
   echo "PASS: killed $node; verified fallback md5sum=$degraded"
+  registrations=$("${compose[@]}" logs --no-color "$node" | grep -c 'RegisterNode succeeded')
   "${compose[@]}" start "$node"
+  for attempt in $(seq 1 30); do
+    ready=$("${compose[@]}" logs --no-color "$node" | grep -c 'RegisterNode succeeded')
+    if ((ready > registrations)); then
+      break
+    fi
+    if [[ "$attempt" == 30 ]]; then
+      echo "$node did not restart" >&2
+      exit 1
+    fi
+    sleep 1
+  done
 done
-"${compose[@]}" exec -T fst1 python3 -c 'from pathlib import Path; p=Path("/var/lib/objectstore/sample/0.chunk"); b=bytearray(p.read_bytes()); b[0]^=1; p.write_bytes(b)'
+"${compose[@]}" exec -T fst1 sh -c 'printf "\001" | dd of=/var/lib/objectstore/sample/0.chunk bs=1 count=1 conv=notrunc'
 log=$(client get sample /tmp/corrupt-fallback 2>&1)
 printf '%s\n' "$log"
 grep -q 'replica rejected node_id=fst1 chunk=0 code=15' <<<"$log"
