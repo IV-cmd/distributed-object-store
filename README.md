@@ -6,8 +6,7 @@ An independent, EOS-inspired C++20 learning project: an in-memory metadata serve
 (MGM), eight storage nodes (FSTs), and a gRPC client. Files use three-way
 replication (`replica3`, the default) or Reed-Solomon four-data/two-parity
 fragments (`rs42`). Both tolerate two lost holders while enough verified data
-survives. This is not CERN EOS or an affiliated implementation.
-
+survives.
 ## Architecture
 
 ```mermaid
