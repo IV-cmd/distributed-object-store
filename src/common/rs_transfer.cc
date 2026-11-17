@@ -23,7 +23,8 @@ grpc::Status FetchStripe(
     return {StatusCode::DATA_LOSS, "incomplete RS stripe metadata"};
   }
   const auto& first = chunks.Get(begin).chunk();
-  if (first.index() % 6 != 0 || first.index() >= LayoutChunkCount(v1::RS42, object_size)) {
+  if (first.index() % 6 != 0 ||
+      first.index() >= LayoutChunkCount(v1::RS42, object_size)) {
     return {StatusCode::DATA_LOSS, "invalid RS stripe index"};
   }
   const auto size = StripeSize(object_size, first.index());
@@ -31,7 +32,8 @@ grpc::Status FetchStripe(
   for (int i = 0; i < 6; ++i) {
     const auto& chunk = chunks.Get(begin + i);
     if (!chunk.committed() || chunk.chunk().object_id() != first.object_id() ||
-        chunk.chunk().index() != first.index() + i || chunk.stripe_index() != static_cast<unsigned>(i) ||
+        chunk.chunk().index() != first.index() + i ||
+        chunk.stripe_index() != static_cast<unsigned>(i) ||
         chunk.parity() != (i >= 4)) {
       return {StatusCode::DATA_LOSS, "inconsistent RS stripe metadata"};
     }
@@ -47,7 +49,8 @@ grpc::Status FetchStripe(
       *request.mutable_chunk() = chunk.chunk();
       v1::ReadChunkResponse response;
       grpc::ClientContext context;
-      context.set_deadline(std::min(deadline, std::chrono::system_clock::now() + std::chrono::seconds(5)));
+      context.set_deadline(std::min(deadline, std::chrono::system_clock::now() +
+                                                  std::chrono::seconds(5)));
       auto status = stub->ReadChunk(&context, request, &response);
       if (status.ok() && (response.data().size() != width ||
                           response.checksum() != chunk.checksum() ||
@@ -60,12 +63,14 @@ grpc::Status FetchStripe(
         break;
       }
       std::clog << "RS shard rejected index=" << chunk.chunk().index()
-                << " node=" << node.node_id() << " code=" << status.error_code() << '\n';
+                << " node=" << node.node_id() << " code=" << status.error_code()
+                << '\n';
     }
   }
   if (available.size() < 4) {
-    return {StatusCode::UNAVAILABLE, "RS42 requires four verified shards; received " +
-                                         std::to_string(available.size())};
+    return {StatusCode::UNAVAILABLE,
+            "RS42 requires four verified shards; received " +
+                std::to_string(available.size())};
   }
   if (available[3].index == 3) {
     data = buffers[0] + buffers[1] + buffers[2] + buffers[3];
@@ -77,7 +82,8 @@ grpc::Status FetchStripe(
     const auto recovered = RsEncode(data);
     for (int i = 0; i < 6; ++i) {
       if (!VerifyChecksum(recovered[i], chunks.Get(begin + i).checksum())) {
-        return {StatusCode::DATA_LOSS, "reconstructed RS checksum disagrees with MGM"};
+        return {StatusCode::DATA_LOSS,
+                "reconstructed RS checksum disagrees with MGM"};
       }
     }
   } catch (const std::invalid_argument& error) {

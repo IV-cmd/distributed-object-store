@@ -43,8 +43,8 @@ TEST(RsCodec, SystematicRoundTripHandlesEmptyTinyAndUnalignedInputs) {
   for (const auto size : {0, 1, 2, 3, 4, 5, 17, 4096, 4097}) {
     const auto data = BinaryData(size);
     const auto shards = RsEncode(data);
-    const std::array<RsShard, 4> available{{{0, shards[0]}, {1, shards[1]},
-                                          {2, shards[2]}, {3, shards[3]}}};
+    const std::array<RsShard, 4> available{
+        {{0, shards[0]}, {1, shards[1]}, {2, shards[2]}, {3, shards[3]}}};
     EXPECT_EQ(RsDecode(available, data.size()), data);
     std::string systematic;
     for (std::size_t i = 0; i < 4; ++i) {
@@ -85,7 +85,8 @@ INSTANTIATE_TEST_SUITE_P(TwoLosses, RsLossTest, testing::ValuesIn(LossPairs()));
 
 TEST(RsCodec, RejectsThreeLossesDuplicateIndicesAndMalformedShards) {
   const auto shards = RsEncode("binary payload");
-  std::vector<RsShard> available{{0, shards[0]}, {1, shards[1]}, {2, shards[2]}};
+  std::vector<RsShard> available{
+      {0, shards[0]}, {1, shards[1]}, {2, shards[2]}};
   EXPECT_THROW(RsDecode(available, 14), std::invalid_argument);
   available.push_back({0, shards[0]});
   EXPECT_THROW(RsDecode(available, 14), std::invalid_argument);

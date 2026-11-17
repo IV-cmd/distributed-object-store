@@ -11,8 +11,8 @@
 #include "client/client.h"
 #include "client/download.h"
 #include "client/erasure.h"
-#include "common/layout.h"
 #include "common/chunk.h"
+#include "common/layout.h"
 
 namespace objectstore {
 namespace {
@@ -156,7 +156,8 @@ ReplicatedClient::ReplicatedClient(
     : stub_(v1::MgmService::NewStub(channel)) {}
 
 grpc::Status ReplicatedClient::Put(const std::filesystem::path& file,
-                                   const std::string& object_id, v1::Layout layout) {
+                                   const std::string& object_id,
+                                   v1::Layout layout) {
   std::ifstream input(file, std::ios::binary);
   if (!input) {
     throw std::runtime_error("cannot open input file");
@@ -255,7 +256,8 @@ grpc::Status ReplicatedClient::Get(const std::string& object_id,
     return {grpc::StatusCode::FAILED_PRECONDITION, "file upload is incomplete"};
   }
   if (!v1::Layout_IsValid(info.layout()) ||
-      info.chunk_count() != LayoutChunkCount(info.layout(), info.size_bytes())) {
+      info.chunk_count() !=
+          LayoutChunkCount(info.layout(), info.size_bytes())) {
     return {grpc::StatusCode::DATA_LOSS, "invalid MGM metadata"};
   }
   const Download download(file);

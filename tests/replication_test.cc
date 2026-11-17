@@ -1,7 +1,6 @@
 #include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
 
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -9,10 +8,12 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "client/client.h"
+#include "client/erasure.h"
 #include "common/chunk.h"
 #include "common/layout.h"
 #include "fst/service.h"
@@ -346,7 +347,8 @@ TEST_F(ErasureTest, ReconstructsTwoLossesAndPreservesOutputAfterThree) {
   Write(root_ / "output", "preserve this");
   const auto status = client_->Get("rs", root_ / "output");
   EXPECT_EQ(status.error_code(), StatusCode::UNAVAILABLE);
-  EXPECT_NE(status.error_message().find("four verified shards"), std::string::npos);
+  EXPECT_NE(status.error_message().find("four verified shards"),
+            std::string::npos);
   EXPECT_EQ(Read(root_ / "output"), "preserve this");
 }
 
@@ -359,19 +361,38 @@ TEST_F(ErasureTest, RejectsSelfConsistentCorruptionBeforeReconstruction) {
   ASSERT_TRUE(client_->Get("rs", root_ / "output").ok());
   EXPECT_EQ(Read(root_ / "output"), bytes);
   services_[2]->lie_on_read.store(true);
-  EXPECT_EQ(client_->Get("rs", root_ / "output").error_code(), StatusCode::UNAVAILABLE);
+  EXPECT_EQ(client_->Get("rs", root_ / "output").error_code(),
+            StatusCode::UNAVAILABLE);
   EXPECT_EQ(Read(root_ / "output"), bytes);
 }
 
 TEST_F(ErasureTest, FailedShardWriteCannotPublishAnIncompleteRsFile) {
   Write(root_ / "input", Bytes(29));
   services_[1]->reject_second_chunk.store(true);
-  EXPECT_EQ(client_->Put(root_ / "input", "rs", v1::RS42).error_code(), StatusCode::INTERNAL);
+  EXPECT_EQ(client_->Put(root_ / "input", "rs", v1::RS42).error_code(),
+            StatusCode::INTERNAL);
   v1::FileMetadata info;
   ASSERT_TRUE(client_->Stat("rs", info).ok());
   EXPECT_FALSE(info.complete());
-  EXPECT_EQ(client_->Get("rs", root_ / "output").error_code(), StatusCode::FAILED_PRECONDITION);
+  EXPECT_EQ(client_->Get("rs", root_ / "output").error_code(),
+            StatusCode::FAILED_PRECONDITION);
   ASSERT_TRUE(client_->Remove("rs").ok());
+}
+
+TEST_F(ErasureTest, RejectsForeignAndReorderedStripeMetadata) {
+  Write(root_ / "input", Bytes(7));
+  ASSERT_TRUE(client_->Put(root_ / "input", "rs", v1::RS42).ok());
+  v1::FileMetadata info;
+  ASSERT_TRUE(client_->Stat("rs", info).ok());
+  std::ostringstream output;
+  info.mutable_chunks(0)->mutable_chunk()->set_object_id("other");
+  EXPECT_EQ(ReadErasure(info, output).error_message(),
+            "RS stripe disagrees with file metadata");
+  info.mutable_chunks(0)->mutable_chunk()->set_object_id("rs");
+  info.mutable_chunks(0)->mutable_chunk()->set_index(6);
+  EXPECT_EQ(ReadErasure(info, output).error_message(),
+            "RS stripe disagrees with file metadata");
+  EXPECT_TRUE(output.str().empty());
 }
 
 }  // namespace

@@ -15,7 +15,8 @@ namespace {
 void Print(const objectstore::v1::FileMetadata& info) {
   std::cout << "object_id=" << info.object_id() << " name=" << info.name()
             << " size=" << info.size_bytes() << " chunks=" << info.chunk_count()
-            << " layout=" << (info.layout() == objectstore::v1::RS42 ? "rs42" : "replica3")
+            << " layout="
+            << (info.layout() == objectstore::v1::RS42 ? "rs42" : "replica3")
             << " complete=" << std::boolalpha << info.complete() << '\n';
   for (const auto& chunk : info.chunks()) {
     std::cout << "chunk=" << chunk.chunk().index()
@@ -44,16 +45,19 @@ int main(int argc, char* argv[]) {
     ++argv;
   }
   const std::string command = argc >= 2 ? argv[1] : "";
-  const std::string layout = command == "put" && argc == 5 ? argv[4] : "replica3";
+  const std::string layout =
+      command == "put" && argc == 5 ? argv[4] : "replica3";
   const bool transfer = (command == "get" && argc == 4) ||
                         (command == "put" && (argc == 4 || argc == 5) &&
                          (layout == "replica3" || layout == "rs42"));
   if ((benchmark && !transfer) ||
       (!transfer && !((command == "rm" || command == "stat") && argc == 3) &&
        !((command == "ls" || command == "nodes") && argc == 2))) {
-    std::cerr << "Usage: client put <file> <object_id> [replica3|rs42] | get <object_id> "
+    std::cerr << "Usage: client put <file> <object_id> [replica3|rs42] | get "
+                 "<object_id> "
                  "<out_file> | rm <object_id> | stat <object_id> | ls | nodes\n"
-                 "       client bench put <file> <object_id> [replica3|rs42] | bench get "
+                 "       client bench put <file> <object_id> [replica3|rs42] | "
+                 "bench get "
                  "<object_id> <out_file> (JSON timing)\n"
                  "MGM_ADDRESS defaults to 127.0.0.1:50051\n";
     return 2;
@@ -66,7 +70,9 @@ int main(int argc, char* argv[]) {
     const auto started = std::chrono::steady_clock::now();
     grpc::Status status;
     if (command == "put") {
-      status = client.Put(argv[2], argv[3], layout == "rs42" ? objectstore::v1::RS42 : objectstore::v1::REPLICA3);
+      status = client.Put(
+          argv[2], argv[3],
+          layout == "rs42" ? objectstore::v1::RS42 : objectstore::v1::REPLICA3);
     } else if (command == "get") {
       status = client.Get(argv[2], argv[3]);
     } else if (command == "rm") {

@@ -24,7 +24,8 @@ inline std::uint64_t StripeSize(std::uint64_t size, std::uint32_t index) {
 inline std::uint64_t LayoutChunkSize(v1::Layout layout, std::uint64_t size,
                                      std::uint32_t index) {
   if (layout == v1::REPLICA3) {
-    return std::min<std::uint64_t>(kChunkSize, size - index * std::uint64_t{kChunkSize});
+    return std::min<std::uint64_t>(kChunkSize,
+                                   size - index * std::uint64_t{kChunkSize});
   }
   const auto bytes = StripeSize(size, index);
   return bytes / 4 + (bytes % 4 != 0);

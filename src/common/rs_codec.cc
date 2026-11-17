@@ -95,9 +95,7 @@ std::uint8_t GfMultiply(std::uint8_t left, std::uint8_t right) {
   return Field{}.Multiply(left, right);
 }
 
-std::uint8_t GfInverse(std::uint8_t value) {
-  return Field{}.Inverse(value);
-}
+std::uint8_t GfInverse(std::uint8_t value) { return Field{}.Inverse(value); }
 
 RsShards RsEncode(std::string_view data) {
   const Field field;
@@ -118,7 +116,8 @@ RsShards RsEncode(std::string_view data) {
     for (std::size_t offset = 0; offset < width; ++offset) {
       std::uint8_t value = 0;
       for (std::size_t j = 0; j < 4; ++j) {
-        value ^= field.Multiply(row[j], static_cast<std::uint8_t>(shards[j][offset]));
+        value ^= field.Multiply(row[j],
+                                static_cast<std::uint8_t>(shards[j][offset]));
       }
       shards[index][offset] = static_cast<char>(value);
     }
@@ -134,7 +133,8 @@ std::string RsDecode(std::span<const RsShard> available, std::size_t size) {
   std::array<bool, 6> seen{};
   for (const auto& shard : available) {
     if (shard.index >= 6 || seen[shard.index] || shard.bytes.size() != width) {
-      throw std::invalid_argument("invalid RS shard index, length, or duplicate");
+      throw std::invalid_argument(
+          "invalid RS shard index, length, or duplicate");
     }
     seen[shard.index] = true;
   }
@@ -146,11 +146,13 @@ std::string RsDecode(std::span<const RsShard> available, std::size_t size) {
   const auto inverse = Invert(rows, field);
   std::string data(size, '\0');
   for (std::size_t row = 0; row < 4; ++row) {
-    for (std::size_t offset = 0; offset < width && row * width + offset < size; ++offset) {
+    for (std::size_t offset = 0; offset < width && row * width + offset < size;
+         ++offset) {
       std::uint8_t value = 0;
       for (std::size_t j = 0; j < 4; ++j) {
-        value ^= field.Multiply(inverse[row][j],
-                                static_cast<std::uint8_t>(available[j].bytes[offset]));
+        value ^= field.Multiply(
+            inverse[row][j],
+            static_cast<std::uint8_t>(available[j].bytes[offset]));
       }
       data[row * width + offset] = static_cast<char>(value);
     }

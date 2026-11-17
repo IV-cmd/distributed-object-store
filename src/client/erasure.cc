@@ -14,13 +14,14 @@ namespace objectstore {
 namespace {
 
 void Deadline(grpc::ClientContext& context) {
-  context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(5));
+  context.set_deadline(std::chrono::system_clock::now() +
+                       std::chrono::seconds(5));
 }
 
 }  // namespace
 
 grpc::Status PutErasure(v1::MgmService::Stub& mgm, std::istream& input,
-                         const std::string& object_id, std::uint64_t size) {
+                        const std::string& object_id, std::uint64_t size) {
   std::set<std::string> initialized;
   std::uint64_t sent = 0;
   std::uint32_t index = 0;
@@ -29,7 +30,8 @@ grpc::Status PutErasure(v1::MgmService::Stub& mgm, std::istream& input,
     std::string stripe(length, '\0');
     input.read(stripe.data(), static_cast<std::streamsize>(length));
     if (input.gcount() != static_cast<std::streamsize>(length)) {
-      return {grpc::StatusCode::FAILED_PRECONDITION, "input changed during RS upload"};
+      return {grpc::StatusCode::FAILED_PRECONDITION,
+              "input changed during RS upload"};
     }
     const auto shards = RsEncode(stripe);
     std::set<std::string> nodes, endpoints;
@@ -44,9 +46,11 @@ grpc::Status PutErasure(v1::MgmService::Stub& mgm, std::istream& input,
       if (!status.ok()) {
         return status;
       }
-      if (plan.nodes_size() != 1 || !nodes.insert(plan.nodes(0).node_id()).second ||
+      if (plan.nodes_size() != 1 ||
+          !nodes.insert(plan.nodes(0).node_id()).second ||
           !endpoints.insert(plan.nodes(0).endpoint()).second) {
-        return {grpc::StatusCode::DATA_LOSS, "RS requires six distinct placement targets"};
+        return {grpc::StatusCode::DATA_LOSS,
+                "RS requires six distinct placement targets"};
       }
       const auto& node = plan.nodes(0);
       auto fst = v1::FstService::NewStub(grpc::CreateChannel(
@@ -83,13 +87,16 @@ grpc::Status PutErasure(v1::MgmService::Stub& mgm, std::istream& input,
         return recorded;
       }
       if (!status.ok()) {
-        return {status.error_code(), "RS shard write failed; file remains incomplete: " + status.error_message()};
+        return {status.error_code(),
+                "RS shard write failed; file remains incomplete: " +
+                    status.error_message()};
       }
     }
     sent += length;
   }
   if (input.peek() != std::char_traits<char>::eof()) {
-    return {grpc::StatusCode::FAILED_PRECONDITION, "input grew during RS upload"};
+    return {grpc::StatusCode::FAILED_PRECONDITION,
+            "input grew during RS upload"};
   }
   v1::ObjectRequest finish;
   finish.set_object_id(object_id);
@@ -104,8 +111,15 @@ grpc::Status ReadErasure(const v1::FileMetadata& info, std::ostream& output) {
     return {grpc::StatusCode::DATA_LOSS, "incomplete RS file metadata"};
   }
   for (int begin = 0; begin < info.chunks_size(); begin += 6) {
+    const auto& id = info.chunks(begin).chunk();
+    if (id.object_id() != info.object_id() ||
+        id.index() != static_cast<std::uint32_t>(begin)) {
+      return {grpc::StatusCode::DATA_LOSS,
+              "RS stripe disagrees with file metadata"};
+    }
     std::string data;
-    const auto status = FetchStripe(info.chunks(), begin, info.size_bytes(), data);
+    const auto status =
+        FetchStripe(info.chunks(), begin, info.size_bytes(), data);
     if (!status.ok()) {
       return status;
     }

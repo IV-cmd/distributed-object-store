@@ -57,7 +57,8 @@ v1::FileMetadata MgmService::Snapshot(const File& file) const {
 grpc::Status MgmService::Put(grpc::ServerContext*,
                              const v1::PutRequest* request, v1::PutResponse*) {
   const auto count = LayoutChunkCount(request->layout(), request->size_bytes());
-  if (!v1::Layout_IsValid(request->layout()) || !ValidId(request->object_id()) ||
+  if (!v1::Layout_IsValid(request->layout()) ||
+      !ValidId(request->object_id()) ||
       count > std::numeric_limits<std::uint32_t>::max()) {
     return {StatusCode::INVALID_ARGUMENT, "invalid object ID or size"};
   }
@@ -98,7 +99,8 @@ grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
     for (const auto& [id, node] : nodes_) {
       available.push_back(node.info);
     }
-    const std::size_t required = record.info.layout() == v1::RS42 ? 6 : kReplicationFactor;
+    const std::size_t required =
+        record.info.layout() == v1::RS42 ? 6 : kReplicationFactor;
     const auto selected = SelectNodes(std::move(available), required);
     if (selected.size() != required) {
       return {StatusCode::RESOURCE_EXHAUSTED,
@@ -162,8 +164,10 @@ grpc::Status MgmService::CommitChunk(grpc::ServerContext*,
   if (record.info.layout() == v1::RS42 &&
       (request->node_ids_size() > 1 ||
        (request->node_ids_size() == 1 &&
-        request->node_ids(0) != record.info.targets(request->chunk().index() % 6).node_id()))) {
-    return {StatusCode::INVALID_ARGUMENT, "RS shard must use its assigned target"};
+        request->node_ids(0) !=
+            record.info.targets(request->chunk().index() % 6).node_id()))) {
+    return {StatusCode::INVALID_ARGUMENT,
+            "RS shard must use its assigned target"};
   }
   std::set<std::string> ids;
   for (const auto& id : request->node_ids()) {
@@ -239,13 +243,14 @@ grpc::Status MgmService::CompleteFile(grpc::ServerContext*,
     return {StatusCode::NOT_FOUND, "file not found"};
   }
   auto& record = file->second;
-  const std::size_t copies = record.info.layout() == v1::RS42 ? 1 : kReplicationFactor;
+  const std::size_t copies =
+      record.info.layout() == v1::RS42 ? 1 : kReplicationFactor;
   if (record.chunks.size() != record.info.chunk_count() ||
-      std::any_of(
-          record.chunks.begin(), record.chunks.end(), [this, copies](const auto& item) {
-            return !item.second.committed() ||
-                   LiveChunk(item.second).replicas_size() != copies;
-          })) {
+      std::any_of(record.chunks.begin(), record.chunks.end(),
+                  [this, copies](const auto& item) {
+                    return !item.second.committed() ||
+                           LiveChunk(item.second).replicas_size() != copies;
+                  })) {
     return {StatusCode::FAILED_PRECONDITION, "file is not fully replicated"};
   }
   record.info.set_complete(true);

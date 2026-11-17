@@ -12,13 +12,16 @@ namespace {
 
 std::vector<v1::NodeInfo> Sources(const v1::ChunkMetadata& chunk,
                                   const std::vector<v1::NodeInfo>& nodes) {
-  const auto& known = chunk.known_replicas().empty() ? chunk.replicas() : chunk.known_replicas();
-  const std::set<std::string> invalid(chunk.invalid_replicas().begin(), chunk.invalid_replicas().end());
+  const auto& known = chunk.known_replicas().empty() ? chunk.replicas()
+                                                     : chunk.known_replicas();
+  const std::set<std::string> invalid(chunk.invalid_replicas().begin(),
+                                      chunk.invalid_replicas().end());
   std::vector<v1::NodeInfo> sources;
   for (const auto& holder : known) {
-    const auto live = std::find_if(nodes.begin(), nodes.end(), [&](const auto& node) {
-      return node.node_id() == holder.node_id() && node.state() == v1::UP;
-    });
+    const auto live =
+        std::find_if(nodes.begin(), nodes.end(), [&](const auto& node) {
+          return node.node_id() == holder.node_id() && node.state() == v1::UP;
+        });
     if (live != nodes.end() && !invalid.contains(holder.node_id())) {
       sources.push_back(*live);
     }
@@ -26,8 +29,10 @@ std::vector<v1::NodeInfo> Sources(const v1::ChunkMetadata& chunk,
   return sources;
 }
 
-void AddHolders(const v1::ChunkMetadata& chunk, std::set<std::string>& holders) {
-  const auto& known = chunk.known_replicas().empty() ? chunk.replicas() : chunk.known_replicas();
+void AddHolders(const v1::ChunkMetadata& chunk,
+                std::set<std::string>& holders) {
+  const auto& known = chunk.known_replicas().empty() ? chunk.replicas()
+                                                     : chunk.known_replicas();
   for (const auto& holder : known) {
     holders.insert(holder.node_id());
   }
@@ -90,9 +95,10 @@ std::vector<RepairTask> DecideRepairs(
         if (stripe.size() != 6 || indices.size() != 6 || available < 4) {
           continue;
         }
-        std::sort(stripe.begin(), stripe.end(), [](const auto& left, const auto& right) {
-          return left.chunk().index() < right.chunk().index();
-        });
+        std::sort(stripe.begin(), stripe.end(),
+                  [](const auto& left, const auto& right) {
+                    return left.chunk().index() < right.chunk().index();
+                  });
       } else if (sources.empty() || sources.size() >= 3) {
         continue;
       }
@@ -105,7 +111,8 @@ std::vector<RepairTask> DecideRepairs(
       const auto targets = SelectNodes(std::move(available), 1);
       if (!targets.empty()) {
         tasks.push_back({chunk, file.size_bytes(), file.generation(),
-                         std::move(sources), targets.front(), std::move(stripe)});
+                         std::move(sources), targets.front(),
+                         std::move(stripe)});
       }
     }
   }
