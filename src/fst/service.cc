@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "common/chunk.h"
+#include "common/layout.h"
 
 namespace objectstore {
 namespace {
@@ -60,11 +61,18 @@ v1::ObjectInfo LoadInfo(const fs::path& dir, const char* state = "manifest") {
   Require(static_cast<bool>(input >> size >> count), StatusCode::DATA_LOSS,
           "invalid manifest");
   input >> std::ws;
-  Require(input.eof() && count == ChunkCount(size) &&
+  unsigned layout = 0;
+  if (!input.eof()) {
+    Require(static_cast<bool>(input >> layout), StatusCode::DATA_LOSS, "invalid layout");
+    input >> std::ws;
+  }
+  Require(input.eof() && layout <= 1 &&
+              count == LayoutChunkCount(static_cast<v1::Layout>(layout), size) &&
               count <= std::numeric_limits<std::uint32_t>::max(),
           StatusCode::DATA_LOSS, "invalid manifest");
   v1::ObjectInfo info;
   info.set_size_bytes(size);
+  info.set_layout(static_cast<v1::Layout>(layout));
   info.set_chunk_count(static_cast<std::uint32_t>(count));
   return info;
 }
@@ -72,10 +80,7 @@ v1::ObjectInfo LoadInfo(const fs::path& dir, const char* state = "manifest") {
 std::uint64_t ExpectedSize(const v1::ObjectInfo& info, std::uint32_t index) {
   Require(index < info.chunk_count(), StatusCode::INVALID_ARGUMENT,
           "chunk index out of range");
-  return index == info.chunk_count() - 1
-             ? info.size_bytes() -
-                   static_cast<std::uint64_t>(index) * kChunkSize
-             : kChunkSize;
+  return LayoutChunkSize(info.layout(), info.size_bytes(), index);
 }
 
 fs::path ChunkPath(const fs::path& dir, std::uint32_t index) {
@@ -138,13 +143,15 @@ grpc::Status FstService::BeginObject(grpc::ServerContext*,
                                      google::protobuf::Empty*) {
   return Run([&] {
     const auto dir = ObjectDir(request->object_id());
-    const auto count = ChunkCount(request->size_bytes());
-    Require(count <= std::numeric_limits<std::uint32_t>::max(),
+    const auto count = LayoutChunkCount(request->layout(), request->size_bytes());
+    Require(v1::Layout_IsValid(request->layout()) &&
+                count <= std::numeric_limits<std::uint32_t>::max(),
             StatusCode::INVALID_ARGUMENT, "object exceeds chunk-index limit");
     Require(fs::create_directory(dir), StatusCode::ALREADY_EXISTS,
             "object ID already exists; delete it before reuse");
-    WriteFile(dir / "pending", std::to_string(request->size_bytes()) + " " +
-                                   std::to_string(count) + "\n");
+    WriteFile(dir / (request->layout() == v1::RS42 ? "repair" : "pending"),
+              std::to_string(request->size_bytes()) + " " + std::to_string(count) + " " +
+                  std::to_string(request->layout()) + "\n");
   });
 }
 
@@ -187,7 +194,7 @@ grpc::Status FstService::WriteChunk(grpc::ServerContext*,
     const auto dir = ObjectDir(id.object_id());
     Require(!fs::exists(dir / "manifest"), StatusCode::ALREADY_EXISTS,
             "completed objects are write-once");
-    const auto info = LoadInfo(dir, "pending");
+    const auto info = LoadInfo(dir, fs::exists(dir / "pending") ? "pending" : "repair");
     Require(request->data().size() == ExpectedSize(info, id.index()),
             StatusCode::INVALID_ARGUMENT, "chunk length does not match object");
     Require(VerifyChecksum(request->data(), request->checksum()),
@@ -247,8 +254,10 @@ grpc::Status FstService::InstallChunk(grpc::ServerContext*,
             "repair cannot modify an unfinished upload");
     v1::ObjectInfo info;
     info.set_size_bytes(request->size_bytes());
-    const auto count = ChunkCount(request->size_bytes());
-    Require(count <= std::numeric_limits<std::uint32_t>::max(),
+    info.set_layout(request->layout());
+    const auto count = LayoutChunkCount(request->layout(), request->size_bytes());
+    Require(v1::Layout_IsValid(request->layout()) &&
+                count <= std::numeric_limits<std::uint32_t>::max(),
             StatusCode::INVALID_ARGUMENT, "object exceeds chunk-index limit");
     info.set_chunk_count(static_cast<std::uint32_t>(count));
     Require(write.data().size() == ExpectedSize(info, id.index()),
@@ -258,12 +267,13 @@ grpc::Status FstService::InstallChunk(grpc::ServerContext*,
     if (fs::exists(dir / "manifest") || fs::exists(dir / "repair")) {
       const auto existing =
           LoadInfo(dir, fs::exists(dir / "manifest") ? "manifest" : "repair");
-      Require(existing.size_bytes() == info.size_bytes(),
+      Require(existing.size_bytes() == info.size_bytes() && existing.layout() == info.layout(),
               StatusCode::ALREADY_EXISTS, "repair object has a different size");
     } else {
       fs::create_directories(dir);
       WriteFile(dir / "repair", std::to_string(info.size_bytes()) + " " +
-                                    std::to_string(info.chunk_count()) + "\n");
+                                    std::to_string(info.chunk_count()) + " " +
+                                    std::to_string(info.layout()) + "\n");
     }
     if (fs::exists(ChunkPath(dir, id.index())) &&
         fs::exists(ChecksumPath(dir, id.index()))) {
@@ -298,6 +308,7 @@ grpc::Status FstService::CopyChunk(grpc::ServerContext*,
     Require(VerifyChecksum(bytes, request->checksum()), StatusCode::DATA_LOSS,
             "source checksum disagrees with MGM");
     install.set_size_bytes(info.size_bytes());
+    install.set_layout(info.layout());
     auto* write = install.mutable_write();
     *write->mutable_chunk() = id;
     write->set_data(bytes);

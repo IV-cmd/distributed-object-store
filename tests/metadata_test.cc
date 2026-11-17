@@ -173,5 +173,53 @@ TEST(MetadataPlacementTest, TooFewRegisteredNodesReturnsExplicitError) {
             StatusCode::RESOURCE_EXHAUSTED);
 }
 
+TEST_F(MetadataTest, RsLayoutRequiresSixNodesAndPinsEachShardToOneTarget) {
+  v1::PutRequest put;
+  put.set_object_id("rs");
+  put.set_layout(v1::RS42);
+  put.set_size_bytes(4 * kChunkSize + 5);
+  v1::PutResponse response;
+  ASSERT_TRUE(service_.Put(nullptr, &put, &response).ok());
+  v1::ChunkId id;
+  id.set_object_id("rs");
+  v1::ReplicaPlan plan;
+  EXPECT_EQ(service_.AllocateChunk(nullptr, &id, &plan).error_code(),
+            StatusCode::RESOURCE_EXHAUSTED);
+  for (const std::string node : {"d", "e", "f"}) {
+    v1::RegisterNodeRequest registration;
+    registration.mutable_node()->set_node_id(node);
+    registration.mutable_node()->set_endpoint(node + ":50052");
+    v1::RegisterNodeResponse accepted;
+    ASSERT_TRUE(service_.RegisterNode(nullptr, &registration, &accepted).ok());
+  }
+  for (unsigned index = 0; index < 12; ++index) {
+    id.set_index(index);
+    plan.Clear();
+    ASSERT_TRUE(service_.AllocateChunk(nullptr, &id, &plan).ok());
+    ASSERT_EQ(plan.nodes_size(), 1);
+    EXPECT_EQ(plan.nodes(0).node_id(), std::string(1, 'a' + index % 6));
+    v1::CommitChunkRequest commit;
+    *commit.mutable_chunk() = id;
+    commit.add_node_ids("other");
+    google::protobuf::Empty empty;
+    EXPECT_EQ(service_.CommitChunk(nullptr, &commit, &empty).error_code(),
+              StatusCode::INVALID_ARGUMENT);
+    commit.set_node_ids(0, plan.nodes(0).node_id());
+    ASSERT_TRUE(service_.CommitChunk(nullptr, &commit, &empty).ok());
+  }
+  v1::ObjectRequest object;
+  object.set_object_id("rs");
+  google::protobuf::Empty empty;
+  ASSERT_TRUE(service_.CompleteFile(nullptr, &object, &empty).ok());
+  v1::FileMetadata info;
+  ASSERT_TRUE(service_.StatFile(nullptr, &object, &info).ok());
+  EXPECT_EQ(info.layout(), v1::RS42);
+  ASSERT_EQ(info.chunks_size(), 12);
+  for (unsigned index = 0; index < 12; ++index) {
+    EXPECT_EQ(info.chunks(index).stripe_index(), index % 6);
+    EXPECT_EQ(info.chunks(index).parity(), index % 6 >= 4);
+  }
+}
+
 }  // namespace
 }  // namespace objectstore

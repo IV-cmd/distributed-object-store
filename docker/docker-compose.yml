@@ -47,6 +47,30 @@ services:
     volumes:
       - fst4-data:/var/lib/objectstore
 
+  fst5:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst5, "fst5:50052"]
+    volumes:
+      - fst5-data:/var/lib/objectstore
+
+  fst6:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst6, "fst6:50052"]
+    volumes:
+      - fst6-data:/var/lib/objectstore
+
+  fst7:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst7, "fst7:50052"]
+    volumes:
+      - fst7-data:/var/lib/objectstore
+
+  fst8:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst8, "fst8:50052"]
+    volumes:
+      - fst8-data:/var/lib/objectstore
+
   client:
     image: distributed-object-store:dev
     build:
@@ -68,3 +92,7 @@ volumes:
   fst2-data:
   fst3-data:
   fst4-data:
+  fst5-data:
+  fst6-data:
+  fst7-data:
+  fst8-data:

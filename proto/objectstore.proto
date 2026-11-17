@@ -77,10 +77,16 @@ message ChunkStatus {
   uint64 size_bytes = 4;
 }
 
+enum Layout {
+  REPLICA3 = 0;
+  RS42 = 1;
+}
+
 message PutRequest {
   string object_id = 1;
   uint64 size_bytes = 2;
   string name = 3;
+  Layout layout = 4;
 }
 
 message PutResponse {
@@ -156,11 +162,13 @@ message ObjectRequest {
 message BeginObjectRequest {
   string object_id = 1;
   uint64 size_bytes = 2;
+  Layout layout = 3;
 }
 
 message ObjectInfo {
   uint64 size_bytes = 1;
   uint32 chunk_count = 2;
+  Layout layout = 3;
 }
 
 message ReplicaPlan {
@@ -180,6 +188,8 @@ message ChunkMetadata {
   bool committed = 4;
   repeated NodeInfo known_replicas = 5;
   repeated string invalid_replicas = 6;
+  uint32 stripe_index = 7;
+  bool parity = 8;
 }
 
 message FileMetadata {
@@ -191,6 +201,7 @@ message FileMetadata {
   repeated ChunkMetadata chunks = 6;
   repeated NodeInfo targets = 7;
   uint64 generation = 8;
+  Layout layout = 9;
 }
 
 message FileList {
@@ -202,9 +213,11 @@ message CopyChunkRequest {
   NodeInfo target = 2;
   fixed64 checksum = 3;
   uint64 size_bytes = 4;
+  repeated ChunkMetadata stripe = 5;
 }
 
 message InstallChunkRequest {
   WriteChunkRequest write = 1;
   uint64 size_bytes = 2;
+  Layout layout = 3;
 }

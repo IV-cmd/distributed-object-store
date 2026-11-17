@@ -25,7 +25,7 @@ std::vector<RepairTask> DecideRepairs(
     const std::vector<v1::NodeInfo>& nodes) {
   std::vector<RepairTask> tasks;
   for (const auto& file : files) {
-    if (!file.complete()) {
+    if (!file.complete() || file.layout() == v1::RS42) {
       continue;
     }
     for (const auto& chunk : file.chunks()) {

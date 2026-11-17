@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "common/chunk.h"
+#include "common/layout.h"
 #include "mgm/placement.h"
 
 namespace objectstore {
@@ -55,8 +56,8 @@ v1::FileMetadata MgmService::Snapshot(const File& file) const {
 
 grpc::Status MgmService::Put(grpc::ServerContext*,
                              const v1::PutRequest* request, v1::PutResponse*) {
-  const auto count = ChunkCount(request->size_bytes());
-  if (!ValidId(request->object_id()) ||
+  const auto count = LayoutChunkCount(request->layout(), request->size_bytes());
+  if (!v1::Layout_IsValid(request->layout()) || !ValidId(request->object_id()) ||
       count > std::numeric_limits<std::uint32_t>::max()) {
     return {StatusCode::INVALID_ARGUMENT, "invalid object ID or size"};
   }
@@ -71,6 +72,7 @@ grpc::Status MgmService::Put(grpc::ServerContext*,
   info.set_name(request->name().empty() ? request->object_id()
                                         : request->name());
   info.set_size_bytes(request->size_bytes());
+  info.set_layout(request->layout());
   info.set_chunk_count(static_cast<std::uint32_t>(count));
   return grpc::Status::OK;
 }
@@ -96,10 +98,11 @@ grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
     for (const auto& [id, node] : nodes_) {
       available.push_back(node.info);
     }
-    const auto selected = SelectNodes(std::move(available), kReplicationFactor);
-    if (selected.size() != kReplicationFactor) {
+    const std::size_t required = record.info.layout() == v1::RS42 ? 6 : kReplicationFactor;
+    const auto selected = SelectNodes(std::move(available), required);
+    if (selected.size() != required) {
       return {StatusCode::RESOURCE_EXHAUSTED,
-              "three distinct registered FSTs required"};
+              "layout requires more distinct healthy FSTs"};
     }
     for (const auto& node : selected) {
       *record.info.add_targets() = node;
@@ -108,8 +111,16 @@ grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
   auto [chunk, inserted] = record.chunks.try_emplace(request->index());
   if (inserted) {
     *chunk->second.mutable_chunk() = *request;
+    if (record.info.layout() == v1::RS42) {
+      chunk->second.set_stripe_index(request->index() % 6);
+      chunk->second.set_parity(request->index() % 6 >= 4);
+    }
   }
-  *response->mutable_nodes() = record.info.targets();
+  if (record.info.layout() == v1::RS42) {
+    *response->add_nodes() = record.info.targets(request->index() % 6);
+  } else {
+    *response->mutable_nodes() = record.info.targets();
+  }
   return grpc::Status::OK;
 }
 
@@ -147,6 +158,12 @@ grpc::Status MgmService::CommitChunk(grpc::ServerContext*,
   const auto chunk = record.chunks.find(request->chunk().index());
   if (record.info.complete() || chunk == record.chunks.end()) {
     return {StatusCode::FAILED_PRECONDITION, "chunk must be allocated first"};
+  }
+  if (record.info.layout() == v1::RS42 &&
+      (request->node_ids_size() > 1 ||
+       (request->node_ids_size() == 1 &&
+        request->node_ids(0) != record.info.targets(request->chunk().index() % 6).node_id()))) {
+    return {StatusCode::INVALID_ARGUMENT, "RS shard must use its assigned target"};
   }
   std::set<std::string> ids;
   for (const auto& id : request->node_ids()) {
@@ -222,11 +239,12 @@ grpc::Status MgmService::CompleteFile(grpc::ServerContext*,
     return {StatusCode::NOT_FOUND, "file not found"};
   }
   auto& record = file->second;
+  const std::size_t copies = record.info.layout() == v1::RS42 ? 1 : kReplicationFactor;
   if (record.chunks.size() != record.info.chunk_count() ||
       std::any_of(
-          record.chunks.begin(), record.chunks.end(), [this](const auto& item) {
+          record.chunks.begin(), record.chunks.end(), [this, copies](const auto& item) {
             return !item.second.committed() ||
-                   LiveChunk(item.second).replicas_size() != kReplicationFactor;
+                   LiveChunk(item.second).replicas_size() != copies;
           })) {
     return {StatusCode::FAILED_PRECONDITION, "file is not fully replicated"};
   }

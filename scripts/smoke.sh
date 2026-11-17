@@ -37,7 +37,7 @@ wait_replicas() {
   echo "Timed out waiting for $object replicas=$count" >&2
   exit 1
 }
-"${compose[@]}" up --build -d
+"${compose[@]}" up --build -d mgm fst1 fst2 fst3 fst4
 for attempt in $(seq 1 60); do
   registered=$("${compose[@]}" logs --no-color fst1 fst2 fst3 fst4 | grep -c 'RegisterNode succeeded' || true)
   if [[ "$registered" == 4 ]]; then break; fi
