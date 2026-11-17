@@ -137,3 +137,9 @@ Owner reflection sections remain blank.
 [RS proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081711607);
 [layout comparison](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081355339);
 [current raw measurements](docs/benchmark-results.json).
+
+- Final evidence review found periodic input produced identical data fragments
+  and parity fragments, weakening the repair proof. The erasure scenario now
+  uses nonperiodic 5 MiB+7-byte data and requires six different expected hashes
+  in each stripe; copying an unrelated surviving fragment cannot satisfy that
+  proof. This is a test-data gap found in review, not a fabricated codec bug.

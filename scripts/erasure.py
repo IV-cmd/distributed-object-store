@@ -17,8 +17,13 @@ def main():
     pairs = []
     with Cluster("erasure", nodes=6) as cluster:
         source = cluster.payload(5)
+        cluster.compose("exec", "-T", "mgm", "sh", "-c",
+                        f"head -c 5242887 /dev/urandom > {source}")
         cluster.client("put", source, "rs-pairs", "rs42")
-        cluster.wait_rs("rs-pairs", 12)
+        initial = cluster.wait_rs("rs-pairs", 12)
+        for begin in range(0, len(initial), 6):
+            if len({row["checksum"] for row in initial[begin:begin + 6]}) != 6:
+                raise AssertionError("proof requires six distinct fragment hashes")
         assert not verified_read(cluster, source, "rs-pairs", "/tmp/rs-output")
         for first, second in combinations(range(1, 7), 2):
             victims = (f"fst{first}", f"fst{second}")
