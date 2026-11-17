@@ -12,6 +12,8 @@
 
 #include "common/chunk.h"
 #include "common/layout.h"
+#include "common/rs_codec.h"
+#include "common/rs_transfer.h"
 
 namespace objectstore {
 namespace {
@@ -293,9 +295,40 @@ grpc::Status FstService::InstallChunk(grpc::ServerContext*,
   });
 }
 
-grpc::Status FstService::CopyChunk(grpc::ServerContext*,
+grpc::Status FstService::CopyChunk(grpc::ServerContext* server_context,
                                    const v1::CopyChunkRequest* request,
                                    google::protobuf::Empty*) {
+  if (request->stripe_size() != 0) {
+    if (request->stripe_size() != 6 || request->target().endpoint().empty() ||
+        request->chunk().object_id() != request->stripe(0).chunk().object_id() ||
+        request->chunk().index() / 6 != request->stripe(0).chunk().index() / 6) {
+      return {StatusCode::INVALID_ARGUMENT, "invalid RS reconstruction request"};
+    }
+    const auto deadline = server_context ? server_context->deadline() :
+        std::chrono::system_clock::now() + std::chrono::seconds(5);
+    std::string data;
+    const auto status = FetchStripe(request->stripe(), 0, request->size_bytes(), data, deadline);
+    if (!status.ok()) {
+      return status;
+    }
+    const auto shards = RsEncode(data);
+    const auto& bytes = shards[request->chunk().index() % 6];
+    if (!VerifyChecksum(bytes, request->checksum())) {
+      return {StatusCode::DATA_LOSS, "reconstructed target checksum disagrees with MGM"};
+    }
+    v1::InstallChunkRequest install;
+    install.set_size_bytes(request->size_bytes());
+    install.set_layout(v1::RS42);
+    *install.mutable_write()->mutable_chunk() = request->chunk();
+    install.mutable_write()->set_data(bytes);
+    install.mutable_write()->set_checksum(request->checksum());
+    auto target = v1::FstService::NewStub(grpc::CreateChannel(
+        request->target().endpoint(), grpc::InsecureChannelCredentials()));
+    grpc::ClientContext context;
+    context.set_deadline(deadline);
+    google::protobuf::Empty empty;
+    return target->InstallChunk(&context, install, &empty);
+  }
   v1::InstallChunkRequest install;
   const auto status = Run([&] {
     const auto& id = request->chunk();

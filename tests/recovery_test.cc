@@ -91,5 +91,36 @@ TEST(RecoveryTest, ExcludesQuarantinedCopiesFromSources) {
   EXPECT_EQ(tasks[0].target.node_id(), "d");
 }
 
+TEST(RecoveryTest, ReconstructsRsFromFourShardsOntoDistinctSpareNodes) {
+  auto file = File();
+  file.set_layout(v1::RS42);
+  file.clear_chunks();
+  std::vector<v1::NodeInfo> nodes;
+  for (const std::string id : {"a", "b", "c", "d", "e", "f", "g", "h"}) {
+    nodes.push_back(Node(id, id == "a" || id == "b" ? v1::DOWN : v1::UP));
+  }
+  for (unsigned index = 0; index < 6; ++index) {
+    auto* chunk = file.add_chunks();
+    chunk->mutable_chunk()->set_object_id("sample");
+    chunk->mutable_chunk()->set_index(index);
+    chunk->set_stripe_index(index);
+    chunk->set_parity(index >= 4);
+    chunk->set_committed(true);
+    *chunk->add_replicas() = nodes[index];
+  }
+  const auto tasks = DecideRepairs({file}, nodes);
+  ASSERT_EQ(tasks.size(), 2);
+  EXPECT_EQ(tasks[0].target.node_id(), "g");
+  EXPECT_EQ(tasks[0].stripe.size(), 6);
+  EXPECT_EQ(tasks[0].sources.size(), 4);
+  *file.mutable_chunks(0)->add_replicas() = nodes[6];
+  const auto remaining = DecideRepairs({file}, nodes);
+  ASSERT_EQ(remaining.size(), 1);
+  EXPECT_EQ(remaining[0].target.node_id(), "h");
+  nodes[2].set_state(v1::DOWN);
+  file.mutable_chunks(0)->mutable_replicas()->RemoveLast();
+  EXPECT_TRUE(DecideRepairs({file}, nodes).empty());
+}
+
 }  // namespace
 }  // namespace objectstore

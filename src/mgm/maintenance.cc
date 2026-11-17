@@ -62,6 +62,9 @@ void MgmService::Maintain(HealthClock::time_point now) {
     *request.mutable_target() = task.target;
     request.set_checksum(task.chunk.checksum());
     request.set_size_bytes(task.size_bytes);
+    for (const auto& shard : task.stripe) {
+      *request.add_stripe() = shard;
+    }
     google::protobuf::Empty empty;
     grpc::ClientContext context;
     context.set_deadline(std::chrono::system_clock::now() +
@@ -81,7 +84,8 @@ void MgmService::Maintain(HealthClock::time_point now) {
                                " chunk=" + std::to_string(id.index()) +
                                " source=" + source.node_id() +
                                " code=" + std::to_string(status.error_code()));
-      if ((status.error_code() == grpc::StatusCode::DATA_LOSS ||
+      if (task.stripe.empty() &&
+          (status.error_code() == grpc::StatusCode::DATA_LOSS ||
            status.error_code() == grpc::StatusCode::NOT_FOUND) &&
           status.error_message().starts_with("SOURCE_CORRUPT:") &&
           nodes_.at(source.node_id()).info.incarnation() ==

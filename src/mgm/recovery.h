@@ -21,6 +21,7 @@ struct RepairTask {
   std::uint64_t generation;
   std::vector<v1::NodeInfo> sources;
   v1::NodeInfo target;
+  std::vector<v1::ChunkMetadata> stripe{};
 };
 
 std::vector<std::string> ExpiredNodes(const std::vector<NodeWatch>& nodes,
