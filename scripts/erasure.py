@@ -51,19 +51,19 @@ def main():
             cluster.wait_node(node, "UP")
             assert cluster.compose("exec", "-T", node, "id", "-u").stdout.strip() != "0"
         cluster.client("stat", "rs-repair")
-        cluster.compose("stop", "-t", "1", "fst1", "fst2")
-        for node in ("fst1", "fst2"):
+        cluster.compose("stop", "-t", "1", "fst1", "fst5")
+        for node in ("fst1", "fst5"):
             cluster.wait_node(node, "DOWN")
-        cluster.wait_rs("rs-repair", 12, exclude=("fst1", "fst2"))
+        cluster.wait_rs("rs-repair", 12, exclude=("fst1", "fst5"))
         verified_read(cluster, source, "rs-repair", "/tmp/rs-output")
         chunks = cluster.chunks("rs-repair")
         assert {"fst7", "fst8"}.issubset({row["nodes"] for row in chunks})
         repairs = [event for event in cluster.events()
                    if event.get("event") == "repair_completed" and event.get("object") == "rs-repair"]
-        assert {int(event["chunk"]) for event in repairs} == {0, 1, 6, 7}
+        assert {int(event["chunk"]) for event in repairs} == {0, 4, 6, 10}
         cluster.save("erasure.json", {"two_loss_pairs": pairs, "corrupt_read": "passed",
                                       "repaired_chunks": chunks, "repair_events": repairs})
-        print("PASS RS repair: six distinct live holders per stripe; fst1/fst2 remain DOWN", flush=True)
+        print("PASS RS repair: six distinct live holders per stripe; fst1/fst5 remain DOWN", flush=True)
 
     with Cluster("erasure-three-loss", nodes=6) as cluster:
         source = cluster.payload(5)
