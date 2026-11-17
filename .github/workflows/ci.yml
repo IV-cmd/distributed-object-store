@@ -58,7 +58,7 @@ jobs:
         run: git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build
 
   compose:
-    name: Single-node storage smoke
+    name: Three-replica storage smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

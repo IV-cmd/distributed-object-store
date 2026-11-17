@@ -1,15 +1,57 @@
+x-fst: &fst
+  image: distributed-object-store:dev
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+  init: true
+  depends_on:
+    - mgm
+
 services:
-  fst:
+  mgm:
     image: distributed-object-store:dev
     build:
       context: ..
       dockerfile: docker/Dockerfile
     init: true
-    command: [fst, "0.0.0.0:50052", /var/lib/objectstore]
+    command: [mgm, "0.0.0.0:50051"]
     ports:
-      - "127.0.0.1:${FST_PORT:-50052}:50052"
+      - "127.0.0.1:${MGM_PORT:-50051}:50051"
+
+  fst1:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst1, "fst1:50052"]
     volumes:
-      - object-data:/var/lib/objectstore
+      - fst1-data:/var/lib/objectstore
+
+  fst2:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst2, "fst2:50052"]
+    volumes:
+      - fst2-data:/var/lib/objectstore
+
+  fst3:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst3, "fst3:50052"]
+    volumes:
+      - fst3-data:/var/lib/objectstore
+
+  client:
+    image: distributed-object-store:dev
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    profiles: [tools]
+    environment:
+      MGM_ADDRESS: mgm:50051
+    volumes:
+      - ../.objectstore-files:/files
+    entrypoint: [client]
+    command: [ls]
+    depends_on:
+      - mgm
 
 volumes:
-  object-data:
+  fst1-data:
+  fst2-data:
+  fst3-data:
