@@ -42,9 +42,8 @@ class StorageTest : public testing::Test {
   void SetUp() override {
     root_ = fs::temp_directory_path() /
             ("objectstore-test-" +
-             std::to_string(std::chrono::steady_clock::now()
-                                .time_since_epoch()
-                                .count()));
+             std::to_string(
+                 std::chrono::steady_clock::now().time_since_epoch().count()));
     ASSERT_TRUE(fs::create_directory(root_));
     Start();
   }
@@ -58,8 +57,9 @@ class StorageTest : public testing::Test {
     builder.RegisterService(service_.get());
     server_ = builder.BuildAndStart();
     ASSERT_NE(server_, nullptr);
-    const auto channel = grpc::CreateChannel("127.0.0.1:" + std::to_string(port),
-                                              grpc::InsecureChannelCredentials());
+    const auto channel =
+        grpc::CreateChannel("127.0.0.1:" + std::to_string(port),
+                            grpc::InsecureChannelCredentials());
     stub_ = v1::FstService::NewStub(channel);
     client_ = std::make_unique<ObjectClient>(channel);
   }
@@ -148,8 +148,8 @@ TEST_F(StorageTest, ClientRoundTripsBoundarySizesAndRemovesObjects) {
     EXPECT_TRUE(fs::exists(root_ / "data" / id / "manifest"));
     EXPECT_FALSE(fs::exists(root_ / "data" / id / "pending"));
     for (std::uint64_t i = 0; i < ChunkCount(size); ++i) {
-      EXPECT_TRUE(fs::exists(root_ / "data" / id /
-                             (std::to_string(i) + ".chunk")));
+      EXPECT_TRUE(
+          fs::exists(root_ / "data" / id / (std::to_string(i) + ".chunk")));
       EXPECT_EQ(Read(root_ / "data" / id / (std::to_string(i) + ".crc")).size(),
                 17);
     }
@@ -193,7 +193,8 @@ TEST_F(StorageTest, RejectsWriteChecksumMismatchWithoutStoringData) {
   Deadline(context);
   const auto status = stub_->WriteChunk(&context, request, &response);
   EXPECT_EQ(status.error_code(), StatusCode::DATA_LOSS);
-  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"), std::string::npos);
+  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"),
+            std::string::npos);
   EXPECT_FALSE(fs::exists(root_ / "data/object/0.chunk"));
   EXPECT_FALSE(fs::exists(root_ / "data/object/0.crc"));
   EXPECT_TRUE(PutChunk("abc").ok());
@@ -221,7 +222,8 @@ TEST_F(StorageTest, ObjectIdsAreWriteOnceUntilDeleted) {
 TEST_F(StorageTest, DetectsFlippedStoredByteAndPreservesExistingDownload) {
   Store();
   const auto chunk_path = root_ / "data/object/0.chunk";
-  std::fstream disk(chunk_path, std::ios::binary | std::ios::in | std::ios::out);
+  std::fstream disk(chunk_path,
+                    std::ios::binary | std::ios::in | std::ios::out);
   ASSERT_TRUE(disk.is_open());
   char byte = 0;
   disk.get(byte);
@@ -232,7 +234,8 @@ TEST_F(StorageTest, DetectsFlippedStoredByteAndPreservesExistingDownload) {
   v1::ReadChunkResponse response;
   const auto status = GetChunk(response);
   EXPECT_EQ(status.error_code(), StatusCode::DATA_LOSS);
-  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"), std::string::npos);
+  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"),
+            std::string::npos);
   EXPECT_TRUE(response.data().empty());
   Write(root_ / "output", "keep me");
   EXPECT_EQ(client_->Get("object", root_ / "output").error_code(),
@@ -247,7 +250,8 @@ TEST_F(StorageTest, RejectsCorruptChecksumSidecar) {
   v1::ReadChunkResponse response;
   const auto status = GetChunk(response);
   EXPECT_EQ(status.error_code(), StatusCode::DATA_LOSS);
-  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"), std::string::npos);
+  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"),
+            std::string::npos);
 }
 
 TEST_F(StorageTest, FinishVerifiesDataBeforePublishingManifest) {
@@ -274,7 +278,8 @@ TEST_F(StorageTest, DeleteChunkRemovesDataAndChecksum) {
 }
 
 TEST_F(StorageTest, RejectsUnsafeIdsAndUnrepresentableSizes) {
-  for (const std::string id : {"", "..", "../outside", "a/b", "/absolute", "a.b"}) {
+  for (const std::string id :
+       {"", "..", "../outside", "a/b", "/absolute", "a.b"}) {
     EXPECT_EQ(Begin(0, id).error_code(), StatusCode::INVALID_ARGUMENT);
   }
   EXPECT_EQ(Begin(0, std::string(129, 'x')).error_code(),
@@ -330,15 +335,17 @@ TEST_F(StorageTest, ClientIndependentlyRejectsBadReadChecksum) {
   BadChecksumService service;
   grpc::ServerBuilder builder;
   int port = 0;
-  builder.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(), &port);
+  builder.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(),
+                           &port);
   builder.RegisterService(&service);
   auto server = builder.BuildAndStart();
   ASSERT_NE(server, nullptr);
   ObjectClient client(grpc::CreateChannel("127.0.0.1:" + std::to_string(port),
-                                           grpc::InsecureChannelCredentials()));
+                                          grpc::InsecureChannelCredentials()));
   const auto status = client.Get("object", root_ / "output");
   EXPECT_EQ(status.error_code(), StatusCode::DATA_LOSS);
-  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"), std::string::npos);
+  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"),
+            std::string::npos);
   EXPECT_FALSE(fs::exists(root_ / "output"));
   EXPECT_FALSE(fs::exists(root_ / "output.download"));
   server->Shutdown();

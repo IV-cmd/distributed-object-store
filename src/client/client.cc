@@ -47,7 +47,7 @@ ObjectClient::ObjectClient(const std::shared_ptr<grpc::Channel>& channel)
     : stub_(v1::FstService::NewStub(channel)) {}
 
 grpc::Status ObjectClient::Put(const fs::path& file,
-                                const std::string& object_id) {
+                               const std::string& object_id) {
   std::ifstream input(file, std::ios::binary);
   if (!input) {
     throw std::runtime_error("cannot open input file");
@@ -68,7 +68,8 @@ grpc::Status ObjectClient::Put(const fs::path& file,
   std::uint32_t index = 0;
   while (ReadNextChunk(input, bytes)) {
     if (bytes.size() > size - sent) {
-      throw std::runtime_error("input file grew during upload; remove partial object");
+      throw std::runtime_error(
+          "input file grew during upload; remove partial object");
     }
     v1::WriteChunkRequest request;
     request.mutable_chunk()->set_object_id(object_id);
@@ -84,7 +85,8 @@ grpc::Status ObjectClient::Put(const fs::path& file,
     sent += bytes.size();
   }
   if (sent != size) {
-    throw std::runtime_error("input file shrank during upload; remove partial object");
+    throw std::runtime_error(
+        "input file shrank during upload; remove partial object");
   }
   v1::ObjectRequest finish;
   finish.set_object_id(object_id);
@@ -94,7 +96,7 @@ grpc::Status ObjectClient::Put(const fs::path& file,
 }
 
 grpc::Status ObjectClient::Get(const std::string& object_id,
-                                const fs::path& file) {
+                               const fs::path& file) {
   v1::ObjectRequest request;
   request.set_object_id(object_id);
   v1::ObjectInfo info;

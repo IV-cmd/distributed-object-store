@@ -70,7 +70,8 @@ std::uint64_t ExpectedSize(const v1::ObjectInfo& info, std::uint32_t index) {
   Require(index < info.chunk_count(), StatusCode::INVALID_ARGUMENT,
           "chunk index out of range");
   return index == info.chunk_count() - 1
-             ? info.size_bytes() - static_cast<std::uint64_t>(index) * kChunkSize
+             ? info.size_bytes() -
+                   static_cast<std::uint64_t>(index) * kChunkSize
              : kChunkSize;
 }
 
@@ -88,9 +89,8 @@ std::string ReadVerified(const fs::path& dir, const v1::ChunkId& id,
   const auto bytes = ReadFile(ChunkPath(dir, id.index()), kChunkSize);
   const auto sidecar = ReadFile(ChecksumPath(dir, id.index()), 32);
   std::uint64_t expected = 0;
-  const auto result = std::from_chars(sidecar.data(),
-                                      sidecar.data() + sidecar.size(), expected,
-                                      16);
+  const auto result = std::from_chars(
+      sidecar.data(), sidecar.data() + sidecar.size(), expected, 16);
   Require(sidecar.size() == 17 && sidecar.back() == '\n' &&
               result.ec == std::errc{} && result.ptr == sidecar.data() + 16 &&
               bytes.size() == expected_size && VerifyChecksum(bytes, expected),
@@ -120,18 +120,19 @@ grpc::Status FstService::Run(const std::function<void()>& operation) {
 }
 
 fs::path FstService::ObjectDir(const std::string& object_id) const {
-  Require(!object_id.empty() && object_id.size() <= 128 &&
-              object_id.find_first_not_of(
-                  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                  "0123456789_-") == std::string::npos,
-          StatusCode::INVALID_ARGUMENT,
-          "object_id must be 1-128 ASCII letters, digits, underscores or hyphens");
+  Require(
+      !object_id.empty() && object_id.size() <= 128 &&
+          object_id.find_first_not_of(
+              "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+              "0123456789_-") == std::string::npos,
+      StatusCode::INVALID_ARGUMENT,
+      "object_id must be 1-128 ASCII letters, digits, underscores or hyphens");
   return data_dir_ / object_id;
 }
 
 grpc::Status FstService::BeginObject(grpc::ServerContext*,
-                                    const v1::BeginObjectRequest* request,
-                                    google::protobuf::Empty*) {
+                                     const v1::BeginObjectRequest* request,
+                                     google::protobuf::Empty*) {
   return Run([&] {
     const auto dir = ObjectDir(request->object_id());
     const auto count = ChunkCount(request->size_bytes());
@@ -145,8 +146,8 @@ grpc::Status FstService::BeginObject(grpc::ServerContext*,
 }
 
 grpc::Status FstService::FinishObject(grpc::ServerContext*,
-                                     const v1::ObjectRequest* request,
-                                     google::protobuf::Empty*) {
+                                      const v1::ObjectRequest* request,
+                                      google::protobuf::Empty*) {
   return Run([&] {
     const auto dir = ObjectDir(request->object_id());
     const auto info = LoadInfo(dir, true);
@@ -161,14 +162,14 @@ grpc::Status FstService::FinishObject(grpc::ServerContext*,
 }
 
 grpc::Status FstService::GetObjectInfo(grpc::ServerContext*,
-                                      const v1::ObjectRequest* request,
-                                      v1::ObjectInfo* response) {
+                                       const v1::ObjectRequest* request,
+                                       v1::ObjectInfo* response) {
   return Run([&] { *response = LoadInfo(ObjectDir(request->object_id())); });
 }
 
 grpc::Status FstService::DeleteObject(grpc::ServerContext*,
-                                     const v1::ObjectRequest* request,
-                                     google::protobuf::Empty*) {
+                                      const v1::ObjectRequest* request,
+                                      google::protobuf::Empty*) {
   return Run([&] {
     Require(fs::remove_all(ObjectDir(request->object_id())) != 0,
             StatusCode::NOT_FOUND, "object not found");
@@ -176,8 +177,8 @@ grpc::Status FstService::DeleteObject(grpc::ServerContext*,
 }
 
 grpc::Status FstService::WriteChunk(grpc::ServerContext*,
-                                   const v1::WriteChunkRequest* request,
-                                   google::protobuf::Empty*) {
+                                    const v1::WriteChunkRequest* request,
+                                    google::protobuf::Empty*) {
   return Run([&] {
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
@@ -203,8 +204,8 @@ grpc::Status FstService::WriteChunk(grpc::ServerContext*,
 }
 
 grpc::Status FstService::ReadChunk(grpc::ServerContext*,
-                                  const v1::ReadChunkRequest* request,
-                                  v1::ReadChunkResponse* response) {
+                                   const v1::ReadChunkRequest* request,
+                                   v1::ReadChunkResponse* response) {
   return Run([&] {
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
@@ -215,8 +216,8 @@ grpc::Status FstService::ReadChunk(grpc::ServerContext*,
 }
 
 grpc::Status FstService::DeleteChunk(grpc::ServerContext*,
-                                    const v1::DeleteChunkRequest* request,
-                                    google::protobuf::Empty*) {
+                                     const v1::DeleteChunkRequest* request,
+                                     google::protobuf::Empty*) {
   return Run([&] {
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
