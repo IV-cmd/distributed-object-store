@@ -40,6 +40,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   std::cout << "RegisterNode succeeded: node_id=" << argv[3]
-            << " endpoint=" << argv[4] << '\n' << std::flush;
+            << " endpoint=" << argv[4] << '\n'
+            << std::flush;
   server->Wait();
 }
