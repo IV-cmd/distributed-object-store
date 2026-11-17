@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     std::cerr << "Failed to start FST on " << argv[1] << '\n';
     return 1;
   }
-  std::cout << "FST listening on " << argv[1] << std::endl;
+  std::cout << "FST listening on " << argv[1] << '\n' << std::flush;
 
   auto stub = objectstore::v1::MgmService::NewStub(
       grpc::CreateChannel(argv[2], grpc::InsecureChannelCredentials()));
@@ -40,6 +40,6 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   std::cout << "RegisterNode succeeded: node_id=" << argv[3]
-            << " endpoint=" << argv[4] << std::endl;
+            << " endpoint=" << argv[4] << '\n' << std::flush;
   server->Wait();
 }

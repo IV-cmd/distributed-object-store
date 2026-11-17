@@ -42,6 +42,8 @@ class MgmRpcTest : public testing::Test {
     stub_ = v1::MgmService::NewStub(
         grpc::CreateChannel("127.0.0.1:" + std::to_string(port),
                             grpc::InsecureChannelCredentials()));
+    request_.mutable_node()->set_node_id("fst-1");
+    request_.mutable_node()->set_endpoint("127.0.0.1:50052");
   }
 
   void TearDown() override {
@@ -50,38 +52,37 @@ class MgmRpcTest : public testing::Test {
     }
   }
 
-  grpc::Status Register(const std::string& id, const std::string& endpoint,
-                        v1::RegisterNodeResponse& response) {
+  grpc::Status Register(v1::RegisterNodeResponse& response) {
     grpc::ClientContext context;
     context.set_deadline(std::chrono::system_clock::now() +
                          std::chrono::seconds(2));
-    v1::RegisterNodeRequest request;
-    request.mutable_node()->set_node_id(id);
-    request.mutable_node()->set_endpoint(endpoint);
-    return stub_->RegisterNode(&context, request, &response);
+    return stub_->RegisterNode(&context, request_, &response);
   }
 
   MgmService service_;
+  v1::RegisterNodeRequest request_;
   std::unique_ptr<grpc::Server> server_;
   std::unique_ptr<v1::MgmService::Stub> stub_;
 };
 
 TEST_F(MgmRpcTest, AcceptsRegistration) {
   v1::RegisterNodeResponse response;
-  EXPECT_TRUE(Register("fst-1", "127.0.0.1:50052", response).ok());
+  EXPECT_TRUE(Register(response).ok());
   EXPECT_TRUE(response.accepted());
 }
 
 TEST_F(MgmRpcTest, RejectsMissingNodeId) {
+  request_.mutable_node()->clear_node_id();
   v1::RegisterNodeResponse response;
-  EXPECT_EQ(Register("", "127.0.0.1:50052", response).error_code(),
+  EXPECT_EQ(Register(response).error_code(),
             grpc::StatusCode::INVALID_ARGUMENT);
   EXPECT_FALSE(response.accepted());
 }
 
 TEST_F(MgmRpcTest, RejectsMissingEndpoint) {
+  request_.mutable_node()->clear_endpoint();
   v1::RegisterNodeResponse response;
-  EXPECT_EQ(Register("fst-1", "", response).error_code(),
+  EXPECT_EQ(Register(response).error_code(),
             grpc::StatusCode::INVALID_ARGUMENT);
   EXPECT_FALSE(response.accepted());
 }

@@ -16,7 +16,7 @@ grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
   response->set_accepted(true);
   std::osyncstream(std::cout)
       << "RegisterNode accepted: node_id=" << node.node_id()
-      << " endpoint=" << node.endpoint() << std::endl;
+      << " endpoint=" << node.endpoint() << '\n' << std::flush;
   return grpc::Status::OK;
 }
 

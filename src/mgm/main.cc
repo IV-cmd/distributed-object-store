@@ -20,6 +20,6 @@ int main(int argc, char* argv[]) {
     std::cerr << "Failed to start MGM on " << address << '\n';
     return 1;
   }
-  std::cout << "MGM listening on " << address << std::endl;
+  std::cout << "MGM listening on " << address << '\n' << std::flush;
   server->Wait();
 }
