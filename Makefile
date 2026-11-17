@@ -1,6 +1,6 @@
 COMPOSE ?= docker compose
 
-.PHONY: dev down logs smoke demo chaos
+.PHONY: dev down logs smoke demo chaos bench
 
 dev:
 	$(COMPOSE) up --build -d
@@ -19,3 +19,6 @@ demo:
 
 chaos:
 	./scripts/chaos.sh
+
+bench:
+	python3 scripts/bench.py

@@ -26,3 +26,14 @@ class MetadataAssertions(unittest.TestCase):
     def test_parses_structured_log_prefix(self):
         self.assertEqual(fields("mgm | timestamp_ms=123 event=node_down node=fst2"),
                          {"timestamp_ms": "123", "event": "node_down", "node": "fst2"})
+
+
+class BenchmarkUsage(unittest.TestCase):
+    def test_rejects_non_transfer_benchmark(self):
+        from cluster import ROOT, run
+        binary = ROOT / "build/src/client/client"
+        if not binary.exists():
+            self.skipTest("Build the C++ client to check its usage contract")
+        result = run([str(binary), "bench", "nodes"], check=False)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Usage:", result.stderr)

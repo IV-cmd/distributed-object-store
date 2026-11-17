@@ -1,7 +1,10 @@
 #include <grpcpp/grpcpp.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <exception>
+#include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <string>
 
@@ -30,12 +33,20 @@ void Print(const objectstore::v1::FileMetadata& info) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  const bool benchmark = argc >= 2 && std::string(argv[1]) == "bench";
+  if (benchmark) {
+    --argc;
+    ++argv;
+  }
   const std::string command = argc >= 2 ? argv[1] : "";
-  if (!((command == "put" || command == "get") && argc == 4) &&
-      !((command == "rm" || command == "stat") && argc == 3) &&
-      !((command == "ls" || command == "nodes") && argc == 2)) {
+  if ((benchmark && command != "put" && command != "get") ||
+      (!((command == "put" || command == "get") && argc == 4) &&
+       !((command == "rm" || command == "stat") && argc == 3) &&
+       !((command == "ls" || command == "nodes") && argc == 2))) {
     std::cerr << "Usage: client put <file> <object_id> | get <object_id> "
                  "<out_file> | rm <object_id> | stat <object_id> | ls | nodes\n"
+                 "       client bench put <file> <object_id> | bench get "
+                 "<object_id> <out_file> (JSON timing)\n"
                  "MGM_ADDRESS defaults to 127.0.0.1:50051\n";
     return 2;
   }
@@ -44,6 +55,7 @@ int main(int argc, char* argv[]) {
     const std::string address = configured ? configured : "127.0.0.1:50051";
     objectstore::ReplicatedClient client(
         grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
+    const auto started = std::chrono::steady_clock::now();
     grpc::Status status;
     if (command == "put") {
       status = client.Put(argv[2], argv[3]);
@@ -82,7 +94,20 @@ int main(int argc, char* argv[]) {
                 << status.error_message() << '\n';
       return 1;
     }
-    std::cout << command << " OK\n";
+    if (benchmark) {
+      const double seconds = std::chrono::duration<double>(
+                                 std::chrono::steady_clock::now() - started)
+                                 .count();
+      const auto bytes =
+          std::filesystem::file_size(command == "put" ? argv[2] : argv[3]);
+      const double rate =
+          seconds > 0 ? static_cast<double>(bytes) / 1e6 / seconds : 0;
+      std::cout << std::setprecision(9) << "{\"operation\":\"" << command
+                << "\",\"bytes\":" << bytes << ",\"seconds\":" << seconds
+                << ",\"MB_per_s\":" << rate << "}\n";
+    } else {
+      std::cout << command << " OK\n";
+    }
     return 0;
   } catch (const std::exception& error) {
     std::cerr << "client: " << error.what() << '\n';
