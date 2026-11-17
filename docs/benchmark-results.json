@@ -1,0 +1,1280 @@
+{
+  "environment": {
+    "measured_at_utc": "2026-11-17T11:34:54.568770+00:00",
+    "revision": "3c2dcb23c1ada8f1413217ac0f8a3855a1431b95",
+    "actions_url": "https://github.com/IV-cmd/distributed-object-store/actions/runs/44075050655",
+    "runner_os": "ubuntu24",
+    "kernel": "7.0.0-1014-aws",
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "docker": {
+      "version": "28.0.4",
+      "storage_driver": "overlay2",
+      "cpus": 4,
+      "memory_bytes": 16464306176
+    },
+    "compose": "2.38.2",
+    "heartbeat_interval_ms": 2000,
+    "heartbeat_timeout_ms": 6000,
+    "repair_interval_ms": 500
+  },
+  "trials": 3,
+  "method": "Single client, sequential RF=3 writes, warm OS cache, no fsync; client steady-clock Put/Get timer includes file I/O and RPCs, excludes Docker/process startup; decimal MB/s, binary MiB sizes. Degraded latency is post-DOWN with no spare started, not timeout cost. Rebuild uses same-host millisecond MGM log timestamps.",
+  "samples": [
+    {
+      "operation": "put",
+      "bytes": 1048576,
+      "seconds": 0.016936069,
+      "MB_per_s": 61.913777,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 1048576,
+      "seconds": 0.006008965,
+      "MB_per_s": 174.501932,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 1048576,
+      "seconds": 0.014267373,
+      "MB_per_s": 73.4946791,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 1048576,
+      "seconds": 0.006330229,
+      "MB_per_s": 165.645824,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 1048576,
+      "seconds": 0.014342184,
+      "MB_per_s": 73.1113197,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 1048576,
+      "seconds": 0.006084782,
+      "MB_per_s": 172.32762,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 16777216,
+      "seconds": 0.093704587,
+      "MB_per_s": 179.0437,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.060001661,
+      "MB_per_s": 279.612526,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 16777216,
+      "seconds": 0.093351239,
+      "MB_per_s": 179.721407,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.059003878,
+      "MB_per_s": 284.340904,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 16777216,
+      "seconds": 0.093834764,
+      "MB_per_s": 178.795313,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.056963215,
+      "MB_per_s": 294.527196,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 67108864,
+      "seconds": 0.316346482,
+      "MB_per_s": 212.137222,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 67108864,
+      "seconds": 0.217633664,
+      "MB_per_s": 308.357001,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 67108864,
+      "seconds": 0.315578321,
+      "MB_per_s": 212.653594,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 67108864,
+      "seconds": 0.225734726,
+      "MB_per_s": 297.29083,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 67108864,
+      "seconds": 0.319273672,
+      "MB_per_s": 210.192289,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 67108864,
+      "seconds": 0.207197195,
+      "MB_per_s": 323.888863,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.059966447,
+      "MB_per_s": 279.776722,
+      "phase": "latency-healthy"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.056002721,
+      "MB_per_s": 299.578587,
+      "phase": "latency-healthy"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.058472403,
+      "MB_per_s": 286.925372,
+      "phase": "latency-healthy"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.06176089,
+      "MB_per_s": 271.647899,
+      "phase": "latency-degraded"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.056131404,
+      "MB_per_s": 298.891793,
+      "phase": "latency-degraded"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.05709223,
+      "MB_per_s": 293.861634,
+      "phase": "latency-degraded"
+    }
+  ],
+  "degraded_node_states": "node_id=fst1 state=UP chunks=16 free_bytes=94119227392\nnode_id=fst2 state=DOWN chunks=16 free_bytes=94152777728\nnode_id=fst3 state=UP chunks=16 free_bytes=94119227392\nnodes OK\n",
+  "rebuild": {
+    "object_bytes": 67108864,
+    "chunks": 64,
+    "kill_requested_ms": 1794915308732,
+    "down_ms": 1794915313919,
+    "rf3_ms": 1794915345868,
+    "kill_to_down_s": 5.187,
+    "down_to_rf3_s": 31.949,
+    "kill_to_rf3_s": 37.136
+  },
+  "events": [
+    {
+      "timestamp_ms": "1794915294012",
+      "event": "node_registered",
+      "node": "fst2",
+      "endpoint": "fst2:50052"
+    },
+    {
+      "timestamp_ms": "1794915294026",
+      "event": "node_registered",
+      "node": "fst1",
+      "endpoint": "fst1:50052"
+    },
+    {
+      "timestamp_ms": "1794915294028",
+      "event": "node_registered",
+      "node": "fst3",
+      "endpoint": "fst3:50052"
+    },
+    {
+      "timestamp_ms": "1794915306414",
+      "event": "node_down",
+      "node": "fst2",
+      "affected_chunks": "16"
+    },
+    {
+      "timestamp_ms": "1794915307623",
+      "event": "node_rejoining",
+      "node": "fst2",
+      "endpoint": "fst2:50052"
+    },
+    {
+      "timestamp_ms": "1794915307631",
+      "event": "node_up",
+      "node": "fst2",
+      "verified": "16",
+      "missing": "0",
+      "corrupt": "0",
+      "unexpected": "0"
+    },
+    {
+      "timestamp_ms": "1794915308089",
+      "event": "node_registered",
+      "node": "fst4",
+      "endpoint": "fst4:50052"
+    },
+    {
+      "timestamp_ms": "1794915313919",
+      "event": "node_down",
+      "node": "fst2",
+      "affected_chunks": "64"
+    },
+    {
+      "timestamp_ms": "1794915313919",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "0",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915313931",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "0",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915314432",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "2",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915314438",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "2",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915314938",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "4",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915314944",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "4",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915315445",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "6",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915315453",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "6",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915315954",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "8",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915315961",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "8",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915316461",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "10",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915316467",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "10",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915316967",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "12",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915316973",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "12",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915317474",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "14",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915317478",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "14",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915317979",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "16",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915317986",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "16",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915318486",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "18",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915318493",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "18",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915318994",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "20",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915319001",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "20",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915319501",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "22",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915319506",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "22",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915320007",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "24",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915320014",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "24",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915320514",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "26",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915320521",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "26",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915321021",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "28",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915321027",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "28",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915321528",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "30",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915321534",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "30",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915322034",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "32",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915322041",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "32",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915322542",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "34",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915322548",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "34",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915323049",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "36",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915323055",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "36",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915323555",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "38",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915323562",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "38",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915324062",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "40",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915324069",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "40",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915324569",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "42",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915324576",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "42",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915325077",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "44",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915325083",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "44",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915325583",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "46",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915325592",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "46",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915326093",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "48",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915326098",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "48",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915326599",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "50",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915326604",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "50",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915327104",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "52",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915327110",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "52",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915327610",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "54",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915327615",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "54",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915328116",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "56",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915328127",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "56",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915328628",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "58",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915328634",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "58",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915329134",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "60",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915329143",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "60",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915329643",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "62",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915329649",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "62",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915330150",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "1",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915330155",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "1",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915330656",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "7",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915330663",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "7",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915331163",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "13",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915331170",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "13",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915331670",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "19",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915331676",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "19",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915332176",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "25",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915332181",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "25",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915332681",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "31",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915332688",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "31",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915333189",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "37",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915333197",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "37",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915333697",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "43",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915333704",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "43",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915334205",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "49",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915334210",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "49",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915334710",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "55",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915334717",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "55",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915335218",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "61",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915335223",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "61",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915335723",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "5",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915335730",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "5",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915336230",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "17",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915336238",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "17",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915336738",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "29",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915336749",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "29",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915337250",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "41",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915337256",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "41",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915337757",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "53",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915337763",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "53",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915338264",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "3",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915338268",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "3",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915338769",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "23",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915338775",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "23",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915339276",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "45",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915339282",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "45",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915339783",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "63",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915339790",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "63",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915340290",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "27",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915340295",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "27",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915340795",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "57",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915340801",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "57",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915341302",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "33",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915341309",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "33",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915341809",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "11",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915341817",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "11",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915342317",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "9",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915342323",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "9",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915342823",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "21",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915342829",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "21",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915343329",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "51",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915343335",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "51",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915343835",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "59",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915343842",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "59",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915344343",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "15",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915344349",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "15",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915344849",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "39",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915344855",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "39",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915345355",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "35",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915345362",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "35",
+      "target": "fst4",
+      "replicas": "3"
+    },
+    {
+      "timestamp_ms": "1794915345862",
+      "event": "repair_started",
+      "object": "rebuild",
+      "chunk": "47",
+      "source": "fst1",
+      "target": "fst4"
+    },
+    {
+      "timestamp_ms": "1794915345868",
+      "event": "repair_completed",
+      "object": "rebuild",
+      "chunk": "47",
+      "target": "fst4",
+      "replicas": "3"
+    }
+  ]
+}

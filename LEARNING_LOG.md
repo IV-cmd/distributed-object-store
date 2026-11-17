@@ -20,6 +20,10 @@ Build skeleton, gRPC plumbing, containers, and CI. No storage logic.
 
 
 
+## Fault injection and measurements
+
+
+
 ## Engineering observations
 
 Owner reflection sections above remain blank.
@@ -57,3 +61,52 @@ Owner reflection sections above remain blank.
   DATA_LOSS sources were quarantined. That could overcount healthy RF after fallback.
   Both confirmed local failures now quarantine that copy; a regression test verifies
   that only the surviving source and verified replacement are counted.
+
+### Fault-injection and benchmark observations
+
+Owner reflection above remains blank; these are recorded engineering facts.
+
+- All three fault scenarios passed in the linked Actions proof run. Node-stop
+  verified sampled reads during recovery and inventory-verified rejoin. Assertions
+  wait for DOWN and exclude the failed holder, so stale initial RF=3 metadata
+  cannot be mistaken for completed repair.
+- Corrupting a running FST chunk caused DATA_LOSS and healthy-copy fallback.
+  The client does not report this to MGM: reactive fallback leaves a metadata
+  knowledge gap and is not a scrubber or automatic corruption repair.
+- Real Linux netem worked using the optional tools image and a narrowly scoped
+  NET_ADMIN capability. Delay is applied to outgoing packets, not once per
+  object; CLI wall-time measurements include Docker exec and are distinct from
+  the client-operation benchmark timer.
+- The first successful proof run uploaded only the visible command logs:
+  upload-artifact excluded the hidden .proof-results directory by default.
+  Enabling hidden files for the explicitly scoped evidence paths and rerunning
+  all three commands preserved the raw samples and container logs too.
+- Shared-runner measurements varied across runs. In the retained run, the
+  post-DOWN degraded-read median was slightly lower than healthy reads; this is
+  a noisy short measurement after the failed node has already been excluded,
+  not evidence that failure improves performance or that timeouts are free.
+- The known-volume rebuild includes one-copy-at-a-time pacing. Its DOWN-to-RF=3
+  duration is not a pure disk/network throughput measurement.
+
+#### Retained measured results
+
+| Object | RF=3 write MB/s | Healthy read MB/s |
+|---|---:|---:|
+| 1 MiB | 73.11 | 172.33 |
+| 16 MiB | 179.04 | 284.34 |
+| 64 MiB | 212.14 | 308.36 |
+
+| 16 MiB reads | Median latency |
+|---|---:|
+| Three healthy holders | 58.47 ms |
+| One holder DOWN; RF=2; spare not started | 57.09 ms |
+
+| 64 MiB rebuild | Time |
+|---|---:|
+| Kill request to DOWN | 5.187 s |
+| DOWN to RF=3 | 31.949 s |
+| Kill request to RF=3 | 37.136 s |
+
+Conditions and raw samples: [benchmark record](docs/benchmark-results.json).
+Runtime evidence: [Actions proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44075050655).
+No new storage race was observed in these scenarios; none is invented here.

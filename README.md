@@ -46,7 +46,94 @@ See [failure detection and recovery](docs/recovery.md) for timing and limits.
 
 See [replication protocol and limits](docs/replication.md) and
 [on-disk format](docs/storage-layout.md). xxHash64 detects accidental corruption;
-it is not cryptographic authentication. No benchmark claims are made.
+it is not cryptographic authentication. Reproducible fault scenarios and measured
+lab results follow below.
+
+## One-command proof runs
+
+Requires Linux, Docker Engine, Compose v2.20+, Make, and Python 3 (standard
+library only). Run from the repository root:
+
+```sh
+make demo    # upload, stop fst2, restore RF=3 on fst4, download and compare
+make chaos   # isolated node-stop, disk-corruption, and network-delay scenarios
+make bench   # measured transfers, post-DOWN latency, and a known-volume rebuild
+```
+
+Each command builds its images, uses uniquely named disposable Compose projects,
+and removes **only its own** containers and test volumes, including on failure.
+Do not use these scripts with valuable data. Cold image builds can take over a
+minute; the demo's upload/failure/recovery sequence runs after startup.
+
+The normal multi-stage image contains MGM/FST/client and runs as UID 10001.
+Only the network scenario selects the optional `fault-tools` image and grants
+`NET_ADMIN` to its disposable fst2; the FST process still runs non-root. The
+script executes `tc` as root inside that container, adds an egress netem rule,
+measures downloads, removes the rule, and checks recovery. This is **not a WAN
+model**. If Linux netem/capabilities are unavailable, the scenario prints FAIL
+and returns nonzero rather than substituting invented latency results.
+
+Every chaos scenario prints PASS/FAIL; any failure makes `make chaos` fail.
+Node-stop samples byte-equal reads during detection, repair, and verified rejoin.
+Disk corruption modifies a running FST's real chunk file and requires an explicit
+DATA_LOSS rejection plus a byte-equal fallback download. That is reactive read
+fallback, **not proactive detection or repair**.
+
+Logs, raw samples, and environment details go under `.proof-results/` (ignored
+by Git). In GitHub Actions, manually run **Extended checks → proof** to execute
+all three commands and save the `proof-proof` artifact; individual `demo`,
+`chaos`, and `bench` choices are also available. Expensive checks stay manual.
+
+## Measured benchmarks
+
+| Object | RF=3 write MB/s | Healthy read MB/s |
+|---|---:|---:|
+| 1 MiB | 73.11 | 172.33 |
+| 16 MiB | 179.04 | 284.34 |
+| 64 MiB | 212.14 | 308.36 |
+
+| 16 MiB reads | Median latency |
+|---|---:|
+| Three healthy holders | 58.47 ms |
+| One holder DOWN; RF=2; spare not started | 57.09 ms |
+
+| 64 MiB rebuild | Time |
+|---|---:|
+| Kill request to DOWN | 5.187 s |
+| DOWN to RF=3 | 31.949 s |
+| Kill request to RF=3 | 37.136 s |
+
+Measured by an actual `make bench` run in [GitHub Actions](https://github.com/IV-cmd/distributed-object-store/actions/runs/44075050655)
+on [source 3c2dcb2](https://github.com/IV-cmd/distributed-object-store/commit/3c2dcb23c1ada8f1413217ac0f8a3855a1431b95).
+[Raw samples and timestamps](docs/benchmark-results.json) are retained in git;
+the Actions artifact additionally contains all container logs.
+
+Conditions: Ubuntu 24.04 GitHub-hosted runner, 4 visible vCPUs,
+15.3 GiB visible RAM, Intel(R) Xeon(R) 6975P-C; Docker 28.0.4
+with overlay2, Compose 2.38.2. All containers share
+one host and its storage. These are short lab observations, not production or
+multi-host performance guarantees.
+
+Each transfer cell is the median of three single-client trials using a
+repeating byte pattern, sequential replicated writes, buffered I/O, warm OS
+page cache, and **no fsync guarantee**. MB/s counts original payload bytes once
+(decimal MB), not three times for replication; object sizes use binary MiB.
+`client bench put/get` times the real Put/Get operation with a steady clock,
+including file I/O, checksums, and RPCs, but excluding Docker/process startup.
+Every downloaded sample is compared byte-for-byte with its input.
+
+The degraded test starts only three holders, then waits for fst2 to be DOWN
+and verifies RF=2 before measuring; the spare is deliberately not started yet.
+Its slightly lower median is **not a speedup claim**: this does not measure the
+pre-detection timeout/fallback window, and three short trials are noisy.
+
+The rebuild is separate: prior objects are deleted, all four FSTs are UP, and a
+64 MiB object loses one copy of each of its 64 chunks. The kill marker is taken
+before the Docker stop request; DOWN and final verified-copy completion use
+same-host MGM log timestamps with millisecond resolution. Metadata must also
+show three distinct surviving holders. Settings are a 2000 ms heartbeat,
+6000 ms timeout, and 500 ms repair interval, with one copy at a time. The rebuild
+therefore includes deliberate repair pacing, not just disk/network copy speed.
 
 ## Build and test
 
@@ -142,8 +229,9 @@ failure during copying. It records timestamps and removes its own test volumes.
 
 The automatic CI workflow runs one GCC build, the tests, and formatting; it
 skips documentation-only pushes. In Actions, **Extended checks** is manual:
-choose `clang`, `static-analysis`, or `compose` when that extra verification is
-useful. The Compose option saves `compose-smoke.log` and propagates failures
+choose `clang`, `static-analysis`, `compose`, or the proof commands above when
+that extra verification is useful. The same automatic job also checks harness
+assertions, client benchmark usage, and Python/Bash syntax. The Compose option saves `compose-smoke.log` and propagates failures
 through its log pipeline. No correctness tests were removed.
 
 ```sh
@@ -155,6 +243,33 @@ cmake --build build-lint --target objectstore_proto --parallel 2
 git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build-lint
 ```
 
+## Honest limits
+
+- **Single MGM is a single point of failure.** No replicated/slave MGM or
+  metadata failover is implemented; EOS-style MGM high availability is not
+  reproduced here.
+- **Metadata is in memory.** Restart loses the namespace, replica map, and file
+  completion state. Heartbeats repopulate the node registry, not the namespace;
+  existing disk bytes are not automatically rediscovered. Metadata scale is
+  bounded by one process's memory.
+- **No Raft/consensus or atomic distributed transaction.** Checksums establish
+  byte integrity, not distributed consistency. Completion/acknowledgement rules
+  do not make metadata fault-tolerant.
+- **No TLS, authentication, or encryption at rest.** This is an isolated lab,
+  not an Internet-facing service.
+- **Minimal rejoin reconciliation, not full anti-entropy.** Full inventories are
+  unpaged; unexpected chunks are flagged, and excess valid copies remain.
+  There is no automatic rebalance or complete orphan cleanup.
+- **No background scrubber.** Reads reject corrupt bytes and try another copy,
+  but do not notify MGM or repair that copy. MGM may still list it until later
+  inventory or repair-source verification discovers it. In-place corruption
+  repair is also absent.
+- **Reed-Solomon RS(4+2) is unbuilt.** Four data plus two parity fragments are a
+  proposed layout, not an implemented encoder/decoder or a benchmarked feature.
+- **No independent host-failure proof or power-loss durability guarantee.**
+  Separate Compose volumes still share one host. Sequential replica writes and
+  fixed placement are deliberate scope limits.
+
 ## Layout and roadmap
 
 `src/mgm` holds metadata and pure placement; `src/fst` holds disk storage;
@@ -163,7 +278,7 @@ git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build-lint
 
 Not yet implemented: metadata persistence/high availability, load balancing,
 capacity-aware placement, a manual node-drain command,
-Reed-Solomon (4+2) erasure coding, scrubbing, in-place corruption repair, benchmarks, TLS/authentication,
+Reed-Solomon (4+2) erasure coding, scrubbing, in-place corruption repair, TLS/authentication,
 or power-loss durability. Parallel replica writes remain a roadmap item.
 
 MIT licensed; see [LICENSE](LICENSE).
