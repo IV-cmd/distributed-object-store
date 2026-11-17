@@ -4,7 +4,8 @@
 
 The chunk-size constant is `objectstore::kChunkSize` in `src/common/chunk.h`:
 1,048,576 bytes (1 MiB). Only the last chunk may be shorter. An empty object has
-zero chunks; its completed manifest still makes it a real, readable object.
+zero chunks. Direct FST API use creates an empty manifest; replicated-client
+empty files live only in MGM metadata, without FST directories.
 
 ```text
 <data_dir>/
@@ -37,8 +38,8 @@ xxHash64, seed 0, digest of the raw chunk bytes. The empty-input digest is
 The writer uses lowercase digits. The format is textual, not native-endian
 binary. `chunk.tmp` and `crc.tmp` are unpublished write scratch files.
 
-A chunk and its sidecar form the natural future transfer unit. The manifest
-supplies object boundaries; there is no placement or replication logic yet.
+A chunk and its sidecar form the replication unit on each selected FST. The
+manifest supplies local object boundaries; MGM owns the cross-node map.
 Changing the constant later requires an on-disk format migration.
 
 ## Why xxHash64
@@ -50,7 +51,8 @@ The `.crc` suffix is a sidecar naming convention, **not a claim to use CRC32C**.
 
 Checksum collisions are possible. An attacker can replace both data and its
 checksum. This detects accidental corruption; it does not authenticate data,
-replace TLS, or recover bytes. No repair copy exists on this single node.
+replace TLS, or recover bytes. Replicated reads can use another verified copy;
+there is still no automatic repair.
 
 ## Upload and read lifecycle
 
@@ -72,11 +74,13 @@ replace TLS, or recover bytes. No repair copy exists on this single node.
 
 The original `WriteChunk`, `ReadChunk`, and `DeleteChunk` RPC names are retained.
 They implement the put/get/delete-chunk operations. Object lifecycle RPCs are
-FST-local; MGM is not in the data path. `Scrub` remains `UNIMPLEMENTED`.
+FST-local. MGM supplies placement and completion metadata but never proxies
+file bytes. `Scrub` remains `UNIMPLEMENTED`.
 
 The client sends one unary RPC per chunk, not one whole-file message or a gRPC
-streaming RPC. Memory use scales with chunk size, not object size. Empty files
-use begin/finish only. Upload errors leave a reserved, removable object rather
+streaming RPC. Chunk payload buffering is bounded by chunk size; MGM metadata
+still grows with file/chunk count. Direct FST empty objects use begin/finish;
+replicated empty files are metadata-only. Upload errors leave a reserved object rather
 than silently treating missing chunks as end-of-file. To retry, remove the ID
 and upload again; automatic retries/resume are not implemented.
 
@@ -115,5 +119,6 @@ The CLI prints the numeric RPC status and message and returns nonzero.
   The two files of a chunk are not committed atomically as a pair.
 - Manifests are validated but not checksummed. There are no versioned schemas,
   upload sessions, quotas, garbage collection, or partial-upload cleanup daemon.
-- No MGM placement, replication, erasure coding, failure detection, scrubber,
-  repair, TLS, or authentication. The network is for trusted local development.
+- See [replication protocol](replication.md) for MGM ownership and fallback. No
+  erasure coding, failure detection, scrubber, repair, TLS, or authentication.
+  The network is for trusted local development.

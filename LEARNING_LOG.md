@@ -19,3 +19,18 @@ Build skeleton, gRPC plumbing, containers, and CI. No storage logic.
 ## Integrity and recovery
 
 
+
+## Engineering observations
+
+Owner reflection sections above remain blank.
+
+- Replica tests first failed to link because their target omitted the FST and
+  client libraries; they now have a separately linked integration-test target.
+- Piping the smoke script through `tee` hid its failed Docker build. CI now sets
+  `pipefail`, so logging cannot turn a failed check into a successful job.
+- Hand-written wrapping differed from clang-format; the actual Actions formatter
+  diff was applied without disabling any format or static-analysis check.
+- Whole-file FST manifests require stable per-file targets. Placement pins one
+  trio instead of distributing different chunks to different node subsets.
+- A partial write records acknowledged replicas but does not publish the file;
+  checksums detect corruption and fallback reads another copy, not repair it.

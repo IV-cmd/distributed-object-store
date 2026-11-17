@@ -2,42 +2,52 @@
 
 [![CI](https://github.com/IV-cmd/distributed-object-store/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/IV-cmd/distributed-object-store/actions/workflows/ci.yml)
 
-An independent, EOS-inspired C++20 learning project. One storage node currently
-stores objects as checksummed files and serves them over gRPC. Replication and
-erasure coding are planned, **not implemented**. This is not CERN EOS or an
-affiliated implementation.
+An independent, EOS-inspired C++20 learning project: an in-memory metadata server
+(MGM), three storage nodes (FSTs), and a gRPC client. Each nonempty file's chunks
+are written to three distinct FSTs. Reads locate replicas through MGM and fall
+back when a replica is unavailable or fails verification. This is not CERN EOS
+or an affiliated implementation. Erasure coding is **not implemented**.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    client[CLI client] -->|Object lifecycle and chunk RPCs| fst[One storage node: FST]
-    fst -->|Read / write / verify| disk[Local chunks + checksum sidecars + manifest]
-    client -. Planned metadata lookup .-> mgm[Metadata server: MGM stub]
+    client[CLI client] <-->|Allocate / commit / locate / stat| mgm[MGM: in-memory metadata]
+    client <-->|Chunk bytes + verification| fst1[FST 1 + volume]
+    client <-->|Chunk bytes + verification| fst2[FST 2 + volume]
+    client <-->|Chunk bytes + verification| fst3[FST 3 + volume]
+    fst1 -. Startup registration .-> mgm
+    fst2 -. Startup registration .-> mgm
+    fst3 -. Startup registration .-> mgm
 ```
 
-The data path is `client → FST → disk`; MGM is not involved. The separate `mgm`
-binary retains its registration handler and unimplemented placement methods.
-FST does not register with MGM or perform background work.
+MGM owns the file-to-chunk-to-node map; **file bytes do not pass through MGM**.
+The client writes each chunk sequentially to all three targets, records only
+acknowledged replicas, and publishes the file only after every chunk has three
+copies and all FST manifests finish. A failed upload stays visibly incomplete.
+
+Registration records endpoints and available capacity at startup, **not ongoing
+liveness**. Killing an FST causes read fallback; it does not remove that node
+from MGM or repair the missing copy. All containers share one physical host.
 
 ## What exists
 
-- C++20 `fst`, `client`, and `mgm` executables; CMake-generated Protobuf/gRPC code.
-- Fixed 1 MiB chunks, shared chunking and xxHash64 code, read/write verification.
-- Write-once object IDs, local size/chunk-count manifests, explicit upload finish.
-- `client put`, `get`, and `rm` talking directly to one configured FST.
-- GoogleTest unit and real-gRPC integration tests, including corrupt stored bytes.
-- A one-FST Compose environment with a persistent named volume.
-- GCC/Clang builds, clang-format/clang-tidy, and container checks in Actions.
+- Fixed 1 MiB chunks and shared xxHash64 verification on writes and reads.
+- Write-once IDs, local FST manifests, and MGM file completion.
+- Pure deterministic placement selecting distinct node IDs and endpoints.
+- In-memory allocation, commit, locate, list, stat, and replica metadata.
+- `client put`, `get`, `rm`, `stat`, and `ls`, using an MGM address.
+- Partial-write records; verified fallback, including corrupt response rejection.
+- GoogleTest unit and real-gRPC tests; GCC/Clang, format/tidy, and Compose CI.
 
-See [storage layout and protocol](docs/storage-layout.md) for formats, status
-codes, and limits. xxHash64 detects accidental corruption, not malicious changes.
+See [replication protocol and limits](docs/replication.md) and
+[on-disk format](docs/storage-layout.md). xxHash64 detects accidental corruption;
+it is not cryptographic authentication. No benchmark claims are made.
 
 ## Build and test
 
 Ubuntu 24.04 is the reference environment. Requires CMake >= 3.24, GCC 13 or
-Clang 18, gRPC/Protobuf, xxHash, and GoogleTest. CMake uses installed packages;
-it does not download source dependencies.
+Clang 18, gRPC/Protobuf, xxHash, and GoogleTest. CMake uses installed packages.
 
 ```sh
 sudo apt-get update
@@ -49,55 +59,63 @@ ctest --test-dir build --output-on-failure
 ```
 
 Select Clang with `-DCMAKE_CXX_COMPILER=clang++-18` in a fresh build directory.
-Use `-DBUILD_TESTING=OFF` for a server/client-only build. Generated sources stay
-in the build tree. Tests bind ephemeral loopback ports and use temporary data.
+Use `-DBUILD_TESTING=OFF` for binaries only. Tests bind ephemeral loopback ports
+and use temporary data, including three real FST servers and an MGM.
 
-## Run one storage node
+## Run the replicated store
 
-Requires Docker Engine, Compose **v2.20+**, and Make. The root Compose file
-includes the definition in `docker/`.
+Requires Docker Engine and Compose **v2.20+**. The root Compose file includes
+`docker/docker-compose.yml`. FSTs register at startup; wait for all three
+`RegisterNode succeeded` messages before uploading.
 
 ```sh
-make dev                       # docker compose up --build -d
-printf 'hello object store\n' > example.txt
-docker compose cp example.txt fst:/tmp/input
+docker compose up --build -d
+docker compose logs fst1 fst2 fst3
+mkdir -p .objectstore-files
+printf 'hello replicated store\n' > .objectstore-files/example.txt
+export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g)
+docker compose run --rm client put /files/example.txt example
+docker compose run --rm client stat example
+docker compose run --rm client get example /files/output.txt
+md5sum .objectstore-files/example.txt .objectstore-files/output.txt
 
-docker compose exec -T fst client put /tmp/input example
-docker compose exec -T fst client get example /tmp/output
-docker compose cp fst:/tmp/output ./output.txt
-cmp example.txt output.txt
-docker compose exec -T fst client rm example
+docker compose kill fst2
+docker compose run --rm client get example /files/degraded.txt
+cmp .objectstore-files/example.txt .objectstore-files/degraded.txt
 
-make logs
-make down
+docker compose start fst2
+# Wait for a new registration message before deleting.
+docker compose logs fst2
+docker compose run --rm client rm example
 ```
 
-The FST runs as an unprivileged user, stores data at `/var/lib/objectstore`,
-and publishes `127.0.0.1:50052`. The named volume survives `make down`;
-`docker compose down --volumes` explicitly destroys it. Set `FST_PORT` to change
-the host port. These are insecure development channels: **no TLS or auth**.
+The optional `client` service mounts `.objectstore-files` at `/files`; its UID/GID
+matches the exported host IDs so downloads are writable. FST services keep
+separate named volumes and run unprivileged. MGM publishes `127.0.0.1:50051`;
+set `MGM_PORT` to change it. Advertised FST names resolve inside Compose, so use
+the container client for this stack, not a host-side client.
+
+`make dev`, `make logs`, and `make down` wrap Compose. **MGM metadata is lost on
+restart**, even though FST volumes retain bytes. There is no namespace recovery
+or automatic re-registration after MGM restarts. For a clean disposable reset,
+`docker compose down --volumes` destroys all stored data. Do not use this for
+valuable files. Channels have **no TLS or authentication**.
 
 ### Without containers
 
+Run these servers concurrently in separate terminals, from the repository root:
+
 ```sh
-# Terminal 1
-./build/src/fst/fst 127.0.0.1:50052 ./data
-# Terminal 2
-./build/src/client/client put example.txt example
-./build/src/client/client get example output.txt
-./build/src/client/client rm example
+./build/src/mgm/mgm 127.0.0.1:50051
+./build/src/fst/fst 127.0.0.1:50052 ./data/fst1 127.0.0.1:50051 fst1 127.0.0.1:50052
+./build/src/fst/fst 127.0.0.1:50053 ./data/fst2 127.0.0.1:50051 fst2 127.0.0.1:50053
+./build/src/fst/fst 127.0.0.1:50054 ./data/fst3 127.0.0.1:50051 fst3 127.0.0.1:50054
 ```
 
-`fst [listen_address] [data_dir]` defaults to `127.0.0.1:50052` and `./data`.
-`FST_ADDRESS` configures the client endpoint (default `127.0.0.1:50052`).
+Then use `./build/src/client/client put <file> <object_id>`, `get <id> <output>`,
+`stat <id>`, `ls`, or `rm <id>`. `MGM_ADDRESS` defaults to `127.0.0.1:50051`.
 CLI exit codes: 0 = success, 1 = RPC/local I/O error, 2 = invalid usage.
-Stop the server with Ctrl-C. Run only one FST process per data directory.
-
-Uploads reserve an ID until removed, even if interrupted; use `client rm` before
-retrying a failed upload. Downloads replace the output only after all chunks
-verify. A hard-killed client can leave `<out_file>.download`; remove that stale
-directory before retrying. Do not modify an input file during upload or delete
-and reuse an object ID during a download.
+Each FST needs exclusive ownership of its data directory.
 
 ## Verification and lint
 
@@ -105,10 +123,10 @@ and reuse an object ID during a download.
 make smoke
 ```
 
-This builds the image, starts one FST in an isolated Compose project, exercises
-multi-chunk and empty-file CLI round-trips, checks deletion, flips a stored byte,
-and requires `DATA_LOSS` / `CHECKSUM_MISMATCH`. It removes its own test volume.
-Actions saves its output as the `compose-smoke` artifact.
+The isolated smoke stack checks three recorded replicas per chunk, byte equality
+and `md5sum`, an actual kill of each FST in turn, corrupted-byte fallback, removal,
+empty files, and partial-upload refusal. It deletes only its own test volumes.
+Actions saves `compose-smoke.log`; the log pipeline propagates failures.
 
 ```sh
 sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
@@ -119,28 +137,15 @@ cmake --build build-lint --target objectstore_proto --parallel 2
 git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build-lint
 ```
 
-## Layout
+## Layout and roadmap
 
-```text
-proto/            RPC definitions and code generation
-src/common/       Shared 1 MiB chunking and xxHash64 checksums
-src/fst/          Disk storage, manifest lifecycle, gRPC service and server
-src/client/       File transfers and CLI
-src/mgm/          Separate metadata-server stub
-tests/            GoogleTest unit and gRPC integration tests
-docker/           Dockerfile and single-node Compose definition
-scripts/          Container smoke check
-docs/             Storage format and protocol documentation
-```
+`src/mgm` holds metadata and pure placement; `src/fst` holds disk storage;
+`src/client` holds transfers and CLI; `src/common` holds chunking/checksums.
+`proto`, `tests`, `docker`, `scripts`, and `docs` contain their named concerns.
 
-## Roadmap / not yet done
+Not yet implemented: metadata persistence/high availability, load balancing,
+capacity-aware placement, failure detection, node drain, re-replication,
+Reed-Solomon (4+2) erasure coding, scrubbing, repair, benchmarks, TLS/authentication,
+or power-loss durability. Parallel replica writes remain a roadmap item.
 
-- MGM placement, persistent metadata, and node registry
-- Three-way replication and Reed-Solomon (4+2) erasure coding
-- Failure detection, node drain, and re-replication
-- Background scrubber and repair
-- Multi-node/network fault injection and benchmarks
-- Authentication, TLS, and crash-safe durable commits
-
-No availability, power-loss durability, throughput, or EOS compatibility claims.
 MIT licensed; see [LICENSE](LICENSE).
