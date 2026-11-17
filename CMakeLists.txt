@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CTest)
 add_compile_options(-Wall -Wextra -Wpedantic)
 
+add_subdirectory(src/common)
 add_subdirectory(proto)
 add_subdirectory(src/mgm)
 add_subdirectory(src/fst)
