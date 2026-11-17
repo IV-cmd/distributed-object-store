@@ -1,0 +1,8 @@
+# Only the network-fault scenario opts into this image and capability.
+services:
+  fst2:
+    image: distributed-object-store:fault-tools
+    build:
+      target: fault-tools
+    cap_add:
+      - NET_ADMIN

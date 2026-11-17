@@ -3,3 +3,7 @@
 build*
 cmake-build-*
 *.md
+
+.proof-results
+.objectstore-files
+__pycache__

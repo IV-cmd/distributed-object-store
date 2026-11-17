@@ -1,6 +1,6 @@
 COMPOSE ?= docker compose
 
-.PHONY: dev down logs smoke
+.PHONY: dev down logs smoke demo
 
 dev:
 	$(COMPOSE) up --build -d
@@ -13,3 +13,6 @@ logs:
 
 smoke:
 	./scripts/smoke.sh
+
+demo:
+	python3 scripts/demo.py

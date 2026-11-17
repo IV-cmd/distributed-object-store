@@ -8,3 +8,6 @@ compile_commands.json
 .vscode/
 
 /.objectstore-files/
+
+/.proof-results/
+__pycache__/
