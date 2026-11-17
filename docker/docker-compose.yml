@@ -4,6 +4,8 @@ x-fst: &fst
     context: ..
     dockerfile: docker/Dockerfile
   init: true
+  environment:
+    HEARTBEAT_INTERVAL_MS: "${HEARTBEAT_INTERVAL_MS:-2000}"
   depends_on:
     - mgm
 
@@ -15,6 +17,9 @@ services:
       dockerfile: docker/Dockerfile
     init: true
     command: [mgm, "0.0.0.0:50051"]
+    environment:
+      HEARTBEAT_TIMEOUT_MS: "${HEARTBEAT_TIMEOUT_MS:-6000}"
+      REPAIR_INTERVAL_MS: "${REPAIR_INTERVAL_MS:-500}"
     ports:
       - "127.0.0.1:${MGM_PORT:-50051}:50051"
 
@@ -36,6 +41,12 @@ services:
     volumes:
       - fst3-data:/var/lib/objectstore
 
+  fst4:
+    <<: *fst
+    command: [fst, "0.0.0.0:50052", /var/lib/objectstore, "mgm:50051", fst4, "fst4:50052"]
+    volumes:
+      - fst4-data:/var/lib/objectstore
+
   client:
     image: distributed-object-store:dev
     build:
@@ -56,3 +67,4 @@ volumes:
   fst1-data:
   fst2-data:
   fst3-data:
+  fst4-data:

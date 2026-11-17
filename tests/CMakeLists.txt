@@ -20,3 +20,7 @@ gtest_discover_tests(metadata_tests PROPERTIES TIMEOUT 10)
 add_executable(replication_tests replication_test.cc)
 target_link_libraries(replication_tests PRIVATE mgm_service fst_service objectstore_client GTest::gtest_main)
 gtest_discover_tests(replication_tests PROPERTIES TIMEOUT 30)
+
+add_executable(repair_tests repair_test.cc)
+target_link_libraries(repair_tests PRIVATE mgm_service fst_service objectstore_client GTest::gtest_main)
+gtest_discover_tests(repair_tests PROPERTIES TIMEOUT 30)

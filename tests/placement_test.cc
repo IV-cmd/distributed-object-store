@@ -53,5 +53,15 @@ TEST(PlacementTest, NeverCountsDuplicateIdsOrEndpointsAsReplicas) {
   }
 }
 
+TEST(PlacementTest, ExcludesDownAndUnverifiedRejoiningNodes) {
+  auto down = Node("a");
+  down.set_state(v1::DOWN);
+  auto rejoining = Node("b");
+  rejoining.set_state(v1::REJOINING);
+  const auto selected = SelectNodes({down, rejoining, Node("c")}, 3);
+  ASSERT_EQ(selected.size(), 1);
+  EXPECT_EQ(selected[0].node_id(), "c");
+}
+
 }  // namespace
 }  // namespace objectstore
