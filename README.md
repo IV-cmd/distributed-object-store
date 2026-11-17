@@ -9,6 +9,14 @@ fragments (`rs42`). Both tolerate two lost holders while enough verified data
 survives.
 ## Architecture
 
+**Architectural inspiration — CERN EOS (external reference).**
+
+![CERN EOS architecture separating client metadata and storage data paths](docs/images/eos-architecture.png)
+
+[Source: CERN EOS documentation](https://eos-docs.web.cern.ch/diopside/architecture/index.html).
+The reference includes QDB persistence, MQ, and active/passive MGM services;
+this project implements none of those. Its own data/control paths are below.
+
 ```mermaid
 flowchart LR
     client[CLI client] <-->|Allocate / commit / locate / stat| mgm[MGM: in-memory metadata]
@@ -32,6 +40,15 @@ Heartbeats maintain UP/DOWN state. MGM replaces unavailable copies on a spare
 FST using verified node-to-node copying, then reconciles a returning node's
 inventory before making it eligible. All containers share one physical host.
 See [failure detection and recovery](docs/recovery.md) for timing and limits.
+
+### RPC transport
+
+![gRPC server and generated client stubs exchanging Protocol Buffer requests and responses](docs/images/grpc-client-server.png)
+
+[Source: gRPC Authors](https://grpc.io/docs/what-is-grpc/introduction/)
+([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+The image illustrates generated stubs and request/response RPCs. Our MGM, FST,
+and CLI binaries are all C++20; no Ruby or Android clients are implemented.
 
 ### Erasure-coded layout
 
@@ -58,6 +75,12 @@ no I/O, RPCs, or global state; client/FST transfers share one reconstruction
 helper. Healthy reads fetch the four data fragments without matrix decoding;
 degraded reads need any four checksum-valid fragments. Repair reconstructs
 bytes rather than copying an unrelated surviving fragment.
+
+![Reed-Solomon four-data/two-parity example reconstructing a missing data fragment](docs/images/reed-solomon-4-2.png)
+
+[Source: Princeton COS 518, Erasure Codes for Systems, page 4 (cropped)](https://www.cs.princeton.edu/courses/archive/spr19/cos518/docs/L14-coding.pdf).
+This is a conceptual four-data/two-parity example, not our implementation.
+The equations are schematic, not our codec's exact GF(256) Cauchy coefficients.
 
 See [erasure coding](docs/erasure-coding.md) for the field arithmetic, padding,
 eight-node run instructions, repair protocol, and limits.
@@ -263,6 +286,13 @@ The worker allows one copy at a time. `stat` counts UP, non-quarantined replicas
 `nodes` exposes node state. Rejoining copies are verified before reuse; excess
 valid copies are retained without rebalancing. See [recovery](docs/recovery.md).
 
+![HDFS architecture showing metadata operations, block storage, and node-to-node replication](docs/images/hdfs-architecture.png)
+
+[Source: Apache Hadoop HDFS Architecture](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html).
+This external comparison illustrates metadata/data separation and replication.
+Our client writes each replica directly; HDFS's write pipeline and rack-aware
+placement are not implemented here.
+
 ## Verification and lint
 
 ```sh
@@ -328,4 +358,5 @@ capacity-aware placement, a manual node-drain command,
 scrubbing, in-place corruption repair, TLS/authentication,
 or power-loss durability. Parallel replica writes remain a roadmap item.
 
-MIT licensed; see [LICENSE](LICENSE).
+MIT licensed; see [LICENSE](LICENSE). External reference images retain their
+original copyrights and source terms.
