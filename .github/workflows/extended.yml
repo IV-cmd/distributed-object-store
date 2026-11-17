@@ -15,6 +15,7 @@ on:
           - demo
           - chaos
           - bench
+          - erasure
           - proof
 
 permissions:
@@ -61,18 +62,18 @@ jobs:
           name: compose-smoke
           path: compose-smoke.log
       - name: Demo, chaos, and benchmark proof
-        if: contains(fromJSON('["demo", "chaos", "bench", "proof"]'), inputs.check)
+        if: contains(fromJSON('["demo", "chaos", "bench", "erasure", "proof"]'), inputs.check)
         env:
           PROOF_CHECK: ${{ inputs.check }}
         run: |
           set -o pipefail
           targets=("$PROOF_CHECK")
-          if [[ "$PROOF_CHECK" == proof ]]; then targets=(demo chaos bench); fi
+          if [[ "$PROOF_CHECK" == proof ]]; then targets=(demo chaos erasure bench); fi
           for target in "${targets[@]}"; do
             make "$target" 2>&1 | tee "$target.log"
           done
       - name: Save proof evidence
-        if: always() && contains(fromJSON('["demo", "chaos", "bench", "proof"]'), inputs.check)
+        if: always() && contains(fromJSON('["demo", "chaos", "bench", "erasure", "proof"]'), inputs.check)
         uses: actions/upload-artifact@v4
         with:
           name: proof-${{ inputs.check }}
@@ -82,3 +83,4 @@ jobs:
             demo.log
             chaos.log
             bench.log
+            erasure.log

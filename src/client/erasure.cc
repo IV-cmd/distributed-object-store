@@ -1,5 +1,7 @@
 #include "client/erasure.h"
 
+#include <grpcpp/grpcpp.h>
+
 #include <algorithm>
 #include <chrono>
 #include <set>

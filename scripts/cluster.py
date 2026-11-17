@@ -27,6 +27,25 @@ def replicas_ready(chunks, count_chunks, replicas=3, exclude=()):
                     for chunk in chunks))
 
 
+def rs_ready(chunks, count_chunks, missing=(), exclude=()):
+    if (count_chunks % 6 or len(chunks) != count_chunks or len(set(missing)) > 2
+            or {int(row["chunk"]) for row in chunks} != set(range(count_chunks))):
+        return False
+    holders = {}
+    for row in chunks:
+        index = int(row["chunk"])
+        nodes = [node for node in row.get("nodes", "").split(",") if node]
+        expected = 0 if index % 6 in missing else 1
+        group = holders.setdefault(index // 6, set())
+        if (int(row["replicas"]) != expected or len(nodes) != expected
+                or int(row["stripe_index"]) != index % 6
+                or row["kind"] != ("parity" if index % 6 >= 4 else "data")
+                or set(nodes).intersection(group) or set(nodes).intersection(exclude)):
+            return False
+        group.update(nodes)
+    return True
+
+
 def run(args, *, env=None, check=True, timeout=60):
     result = subprocess.run(args, env=env, capture_output=True, text=True,
                             timeout=timeout)
@@ -104,6 +123,10 @@ class Cluster:
     def wait_replicas(self, object_id, mib, count=3, exclude=()):
         self.wait(f"{object_id} RF={count}, excluding {exclude}",
                   lambda: replicas_ready(self.chunks(object_id), mib, count, exclude))
+
+    def wait_rs(self, object_id, count_chunks, missing=(), exclude=()):
+        self.wait(f"{object_id} RS layout, missing={missing}",
+                  lambda: rs_ready(self.chunks(object_id), count_chunks, missing, exclude))
 
     def payload(self, mib):
         destination = f"/tmp/input-{mib}MiB"

@@ -10,9 +10,11 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "client/client.h"
 #include "common/chunk.h"
+#include "common/layout.h"
 #include "fst/service.h"
 #include "mgm/service.h"
 
@@ -28,6 +30,7 @@ class FaultyFst final : public v1::FstService::Service {
 
   std::atomic<bool> reject_second_chunk{false};
   std::atomic<bool> lie_on_read{false};
+  std::atomic<unsigned> reads{0};
 
   grpc::Status BeginObject(grpc::ServerContext* context,
                            const v1::BeginObjectRequest* request,
@@ -55,6 +58,7 @@ class FaultyFst final : public v1::FstService::Service {
   grpc::Status ReadChunk(grpc::ServerContext* context,
                          const v1::ReadChunkRequest* request,
                          v1::ReadChunkResponse* response) override {
+    ++reads;
     const auto status = store_.ReadChunk(context, request, response);
     if (status.ok() && lie_on_read.load() && !response->data().empty()) {
       response->mutable_data()->front() ^= 1;
@@ -69,6 +73,8 @@ class FaultyFst final : public v1::FstService::Service {
 
 class ReplicationTest : public testing::Test {
  protected:
+  virtual std::size_t NodeCount() const { return 3; }
+
   void SetUp() override {
     static std::atomic<unsigned> sequence{0};
     root_ = fs::temp_directory_path() /
@@ -89,6 +95,9 @@ class ReplicationTest : public testing::Test {
                             grpc::InsecureChannelCredentials());
     client_ = std::make_unique<ReplicatedClient>(channel);
     auto registry = v1::MgmService::NewStub(channel);
+    stores_.resize(NodeCount());
+    services_.resize(NodeCount());
+    servers_.resize(NodeCount());
     for (std::size_t index = 0; index < stores_.size(); ++index) {
       stores_[index] = std::make_unique<FstService>(NodeDir(index));
       services_[index] = std::make_unique<FaultyFst>(*stores_[index]);
@@ -166,9 +175,9 @@ class ReplicationTest : public testing::Test {
   fs::path root_;
   MgmService mgm_;
   std::unique_ptr<grpc::Server> mgm_server_;
-  std::array<std::unique_ptr<FstService>, 3> stores_;
-  std::array<std::unique_ptr<FaultyFst>, 3> services_;
-  std::array<std::unique_ptr<grpc::Server>, 3> servers_;
+  std::vector<std::unique_ptr<FstService>> stores_;
+  std::vector<std::unique_ptr<FaultyFst>> services_;
+  std::vector<std::unique_ptr<grpc::Server>> servers_;
   std::unique_ptr<ReplicatedClient> client_;
 };
 
@@ -294,6 +303,75 @@ TEST_F(ReplicationTest, FailedDeleteRetainsMetadataForRetry) {
   EXPECT_EQ(client_->Remove("sample").error_code(), StatusCode::UNAVAILABLE);
   v1::FileMetadata info;
   EXPECT_TRUE(client_->Stat("sample", info).ok());
+}
+
+class ErasureTest : public ReplicationTest {
+ protected:
+  std::size_t NodeCount() const override { return 6; }
+};
+
+TEST_F(ErasureTest, RoundTripsBoundariesAndNeverReadsParityOnTheHealthyPath) {
+  for (const auto size : {std::size_t{0}, std::size_t{1}, std::size_t{17},
+                          kChunkSize, 4 * kChunkSize, 4 * kChunkSize + 7}) {
+    const auto bytes = Bytes(size);
+    Write(root_ / "input", bytes);
+    ASSERT_TRUE(client_->Put(root_ / "input", "rs", v1::RS42).ok());
+    v1::FileMetadata info;
+    ASSERT_TRUE(client_->Stat("rs", info).ok());
+    EXPECT_TRUE(info.complete());
+    EXPECT_EQ(info.layout(), v1::RS42);
+    EXPECT_EQ(info.chunk_count(), LayoutChunkCount(v1::RS42, size));
+    for (const auto& chunk : info.chunks()) {
+      EXPECT_EQ(chunk.replicas_size(), 1);
+      EXPECT_EQ(chunk.stripe_index(), chunk.chunk().index() % 6);
+      EXPECT_EQ(chunk.parity(), chunk.stripe_index() >= 4);
+    }
+    ASSERT_TRUE(client_->Get("rs", root_ / "output").ok());
+    EXPECT_EQ(Read(root_ / "output"), bytes);
+    EXPECT_EQ(services_[4]->reads.load(), 0);
+    EXPECT_EQ(services_[5]->reads.load(), 0);
+    ASSERT_TRUE(client_->Remove("rs").ok());
+  }
+}
+
+TEST_F(ErasureTest, ReconstructsTwoLossesAndPreservesOutputAfterThree) {
+  const auto bytes = Bytes(4 * kChunkSize + 7);
+  Write(root_ / "input", bytes);
+  ASSERT_TRUE(client_->Put(root_ / "input", "rs", v1::RS42).ok());
+  Stop(0);
+  Stop(1);
+  ASSERT_TRUE(client_->Get("rs", root_ / "output").ok());
+  EXPECT_EQ(Read(root_ / "output"), bytes);
+  Stop(2);
+  Write(root_ / "output", "preserve this");
+  const auto status = client_->Get("rs", root_ / "output");
+  EXPECT_EQ(status.error_code(), StatusCode::UNAVAILABLE);
+  EXPECT_NE(status.error_message().find("four verified shards"), std::string::npos);
+  EXPECT_EQ(Read(root_ / "output"), "preserve this");
+}
+
+TEST_F(ErasureTest, RejectsSelfConsistentCorruptionBeforeReconstruction) {
+  const auto bytes = Bytes(1234);
+  Write(root_ / "input", bytes);
+  ASSERT_TRUE(client_->Put(root_ / "input", "rs", v1::RS42).ok());
+  Stop(0);
+  services_[1]->lie_on_read.store(true);
+  ASSERT_TRUE(client_->Get("rs", root_ / "output").ok());
+  EXPECT_EQ(Read(root_ / "output"), bytes);
+  services_[2]->lie_on_read.store(true);
+  EXPECT_EQ(client_->Get("rs", root_ / "output").error_code(), StatusCode::UNAVAILABLE);
+  EXPECT_EQ(Read(root_ / "output"), bytes);
+}
+
+TEST_F(ErasureTest, FailedShardWriteCannotPublishAnIncompleteRsFile) {
+  Write(root_ / "input", Bytes(29));
+  services_[1]->reject_second_chunk.store(true);
+  EXPECT_EQ(client_->Put(root_ / "input", "rs", v1::RS42).error_code(), StatusCode::INTERNAL);
+  v1::FileMetadata info;
+  ASSERT_TRUE(client_->Stat("rs", info).ok());
+  EXPECT_FALSE(info.complete());
+  EXPECT_EQ(client_->Get("rs", root_ / "output").error_code(), StatusCode::FAILED_PRECONDITION);
+  ASSERT_TRUE(client_->Remove("rs").ok());
 }
 
 }  // namespace

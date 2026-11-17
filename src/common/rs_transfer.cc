@@ -1,8 +1,11 @@
 #include "common/rs_transfer.h"
 
+#include <grpcpp/grpcpp.h>
+
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "common/chunk.h"
