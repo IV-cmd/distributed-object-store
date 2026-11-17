@@ -39,8 +39,9 @@ class MgmRpcTest : public testing::Test {
     builder.RegisterService(&service_);
     server_ = builder.BuildAndStart();
     ASSERT_NE(server_, nullptr);
-    stub_ = v1::MgmService::NewStub(grpc::CreateChannel(
-        "127.0.0.1:" + std::to_string(port), grpc::InsecureChannelCredentials()));
+    stub_ = v1::MgmService::NewStub(
+        grpc::CreateChannel("127.0.0.1:" + std::to_string(port),
+                            grpc::InsecureChannelCredentials()));
   }
 
   void TearDown() override {
@@ -87,7 +88,8 @@ TEST_F(MgmRpcTest, RejectsMissingEndpoint) {
 
 TEST_F(MgmRpcTest, GetIsUnimplemented) {
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(2));
+  context.set_deadline(std::chrono::system_clock::now() +
+                       std::chrono::seconds(2));
   v1::GetRequest request;
   request.set_object_id("example");
   v1::GetResponse response;
@@ -97,7 +99,8 @@ TEST_F(MgmRpcTest, GetIsUnimplemented) {
 
 TEST_F(MgmRpcTest, PutIsUnimplemented) {
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(2));
+  context.set_deadline(std::chrono::system_clock::now() +
+                       std::chrono::seconds(2));
   v1::PutRequest request;
   request.set_object_id("example");
   request.set_size_bytes(42);

@@ -11,9 +11,8 @@
 #include "objectstore.grpc.pb.h"
 
 int main(int argc, char* argv[]) {
-  if (argc < 4 ||
-      !((std::string_view(argv[2]) == "get" && argc == 4) ||
-        (std::string_view(argv[2]) == "put" && argc == 5))) {
+  if (argc < 4 || !((std::string_view(argv[2]) == "get" && argc == 4) ||
+                    (std::string_view(argv[2]) == "put" && argc == 5))) {
     std::cerr << "Usage: client <mgm_address> get <object_id>\n"
                  "       client <mgm_address> put <object_id> <size_bytes>\n";
     return 2;
@@ -31,7 +30,8 @@ int main(int argc, char* argv[]) {
   auto stub = objectstore::v1::MgmService::NewStub(
       grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials()));
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(5));
+  context.set_deadline(std::chrono::system_clock::now() +
+                       std::chrono::seconds(5));
   context.set_wait_for_ready(true);
   grpc::Status status;
   if (std::string_view(argv[2]) == "get") {
