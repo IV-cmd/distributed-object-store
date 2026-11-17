@@ -13,6 +13,10 @@ service MgmService {
 }
 
 service FstService {
+  rpc BeginObject(BeginObjectRequest) returns (google.protobuf.Empty);
+  rpc FinishObject(ObjectRequest) returns (google.protobuf.Empty);
+  rpc GetObjectInfo(ObjectRequest) returns (ObjectInfo);
+  rpc DeleteObject(ObjectRequest) returns (google.protobuf.Empty);
   rpc WriteChunk(WriteChunkRequest) returns (google.protobuf.Empty);
   rpc ReadChunk(ReadChunkRequest) returns (ReadChunkResponse);
   rpc DeleteChunk(DeleteChunkRequest) returns (google.protobuf.Empty);
@@ -86,6 +90,7 @@ message ReportChunkStatusRequest {
 message WriteChunkRequest {
   ChunkId chunk = 1;
   bytes data = 2;
+  fixed64 checksum = 3;
 }
 
 message ReadChunkRequest {
@@ -94,6 +99,7 @@ message ReadChunkRequest {
 
 message ReadChunkResponse {
   bytes data = 1;
+  fixed64 checksum = 2;
 }
 
 message DeleteChunkRequest {
@@ -102,4 +108,18 @@ message DeleteChunkRequest {
 
 message ScrubResponse {
   repeated ChunkStatus chunks = 1;
+}
+
+message ObjectRequest {
+  string object_id = 1;
+}
+
+message BeginObjectRequest {
+  string object_id = 1;
+  uint64 size_bytes = 2;
+}
+
+message ObjectInfo {
+  uint64 size_bytes = 1;
+  uint32 chunk_count = 2;
 }
