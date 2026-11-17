@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <system_error>
 
+#include "client/download.h"
 #include "common/chunk.h"
 
 namespace objectstore {
@@ -20,26 +21,6 @@ void SetDeadline(grpc::ClientContext& context) {
                        std::chrono::seconds(30));
 }
 
-class Download {
- public:
-  explicit Download(const fs::path& output)
-      : dir_(output.string() + ".download") {
-    if (!fs::create_directory(dir_)) {
-      throw std::runtime_error("temporary download directory already exists");
-    }
-  }
-  ~Download() {
-    std::error_code ignored;
-    fs::remove_all(dir_, ignored);
-  }
-  Download(const Download&) = delete;
-  Download& operator=(const Download&) = delete;
-
-  fs::path File() const { return dir_ / "data"; }
-
- private:
-  fs::path dir_;
-};
 
 }  // namespace
 

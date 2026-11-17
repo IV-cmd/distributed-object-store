@@ -2,12 +2,15 @@
 
 #include <grpcpp/grpcpp.h>
 
+#include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <iostream>
 #include <set>
 #include <stdexcept>
 #include <vector>
 
+#include "client/download.h"
 #include "common/chunk.h"
 
 namespace objectstore {
@@ -102,6 +105,48 @@ grpc::Status FinishReplicas(const v1::ObjectRequest& request,
   return failure;
 }
 
+grpc::Status ReadReplicas(const v1::ChunkMetadata& chunk,
+                           std::uint64_t expected_size,
+                           v1::ReadChunkResponse& response) {
+  if (!chunk.committed() || chunk.replicas().empty()) {
+    return {grpc::StatusCode::FAILED_PRECONDITION, "no committed replicas"};
+  }
+  const auto count = static_cast<std::size_t>(chunk.replicas_size());
+  grpc::Status failure(grpc::StatusCode::UNAVAILABLE, "no reachable replicas");
+  bool corrupt = false;
+  for (std::size_t offset = 0; offset < count; ++offset) {
+    const auto index = (chunk.chunk().index() + offset) % count;
+    const auto& node = chunk.replicas(static_cast<int>(index));
+    auto stub = v1::FstService::NewStub(
+        grpc::CreateChannel(node.endpoint(), grpc::InsecureChannelCredentials()));
+    v1::ReadChunkRequest request;
+    *request.mutable_chunk() = chunk.chunk();
+    grpc::ClientContext context;
+    Deadline(context);
+    auto status = stub->ReadChunk(&context, request, &response);
+    if (status.ok() &&
+        (response.data().size() != expected_size ||
+         response.checksum() != chunk.checksum() ||
+         !VerifyChecksum(response.data(), chunk.checksum()))) {
+      status = {grpc::StatusCode::DATA_LOSS,
+                "CHECKSUM_MISMATCH: response disagrees with MGM metadata"};
+    }
+    if (status.ok()) {
+      return status;
+    }
+    corrupt = corrupt || status.error_code() == grpc::StatusCode::DATA_LOSS;
+    failure = status;
+    std::clog << "replica rejected node_id=" << node.node_id()
+              << " chunk=" << chunk.chunk().index()
+              << " code=" << status.error_code() << '\n';
+    response.Clear();
+  }
+  return {corrupt ? grpc::StatusCode::DATA_LOSS : failure.error_code(),
+          std::string(corrupt ? "CHECKSUM_MISMATCH: " : "") +
+              "no verified replica for chunk " +
+              std::to_string(chunk.chunk().index())};
+}
+
 }  // namespace
 
 ReplicatedClient::ReplicatedClient(const std::shared_ptr<grpc::Channel>& channel)
@@ -188,6 +233,82 @@ grpc::Status ReplicatedClient::List(v1::FileList& files) {
   grpc::ClientContext context;
   Deadline(context);
   return stub_->ListFiles(&context, request, &files);
+}
+
+grpc::Status ReplicatedClient::Get(const std::string& object_id,
+                                    const std::filesystem::path& file) {
+  v1::FileMetadata info;
+  auto status = Stat(object_id, info);
+  if (!status.ok()) {
+    return status;
+  }
+  if (!info.complete()) {
+    return {grpc::StatusCode::FAILED_PRECONDITION, "file upload is incomplete"};
+  }
+  if (info.chunk_count() != ChunkCount(info.size_bytes())) {
+    return {grpc::StatusCode::DATA_LOSS, "invalid MGM metadata"};
+  }
+  const Download download(file);
+  std::ofstream output;
+  output.exceptions(std::ios::failbit | std::ios::badbit);
+  output.open(download.File(), std::ios::binary | std::ios::trunc);
+  auto remaining = info.size_bytes();
+  for (std::uint32_t index = 0; index < info.chunk_count(); ++index) {
+    v1::ChunkId request;
+    request.set_object_id(object_id);
+    request.set_index(index);
+    v1::ChunkMetadata location;
+    grpc::ClientContext context;
+    Deadline(context);
+    status = stub_->LocateChunk(&context, request, &location);
+    if (!status.ok()) {
+      return status;
+    }
+    if (location.chunk().object_id() != object_id ||
+        location.chunk().index() != index) {
+      return {grpc::StatusCode::DATA_LOSS, "MGM returned the wrong chunk"};
+    }
+    v1::ReadChunkResponse response;
+    status = ReadReplicas(location, std::min<std::uint64_t>(kChunkSize, remaining),
+                          response);
+    if (!status.ok()) {
+      return status;
+    }
+    output.write(response.data().data(),
+                 static_cast<std::streamsize>(response.data().size()));
+    remaining -= response.data().size();
+  }
+  output.close();
+  std::filesystem::rename(download.File(), file);
+  return grpc::Status::OK;
+}
+
+grpc::Status ReplicatedClient::Remove(const std::string& object_id) {
+  v1::FileMetadata info;
+  auto status = Stat(object_id, info);
+  if (!status.ok()) {
+    return status;
+  }
+  v1::ObjectRequest request;
+  request.set_object_id(object_id);
+  grpc::Status failure;
+  google::protobuf::Empty empty;
+  for (const auto& node : info.targets()) {
+    auto stub = v1::FstService::NewStub(
+        grpc::CreateChannel(node.endpoint(), grpc::InsecureChannelCredentials()));
+    grpc::ClientContext context;
+    Deadline(context);
+    status = stub->DeleteObject(&context, request, &empty);
+    if (!status.ok() && status.error_code() != grpc::StatusCode::NOT_FOUND) {
+      failure = status;
+    }
+  }
+  if (!failure.ok()) {
+    return {failure.error_code(), "delete incomplete; MGM metadata retained"};
+  }
+  grpc::ClientContext context;
+  Deadline(context);
+  return stub_->DeleteFile(&context, request, &empty);
 }
 
 }  // namespace objectstore
