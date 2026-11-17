@@ -106,7 +106,8 @@ historical holders; `replicas` reports current eligible copies. A rejoin may lea
 more than three verified copies; there is no rebalance or excess-copy trimming.
 
 Metadata remains unpaged and in-memory; there is no fsync guarantee, distributed
-transaction, orphan cleanup, scrubber, erasure coding, TLS, or authentication.
+transaction, orphan cleanup, scrubber, TLS, or authentication.
+The separate [RS42 layout](erasure-coding.md) does not change replica3 semantics.
 Failed uploads remain incomplete until removed; repair does not finish them.
 Separate Compose volumes on one host are not independent failure domains.
 

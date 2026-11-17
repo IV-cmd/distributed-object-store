@@ -107,6 +107,33 @@ Owner reflection above remains blank; these are recorded engineering facts.
 | DOWN to RF=3 | 31.949 s |
 | Kill request to RF=3 | 37.136 s |
 
-Conditions and raw samples: [benchmark record](docs/benchmark-results.json).
+Conditions and raw samples: [historical benchmark record](https://github.com/IV-cmd/distributed-object-store/blob/f825ede8e4e6fdbb256ab4b33f9ff9870a9bf85b/docs/benchmark-results.json).
 Runtime evidence: [Actions proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44075050655).
 No new storage race was observed in these scenarios; none is invented here.
+
+### Erasure-coding engineering observations
+
+Owner reflection sections remain blank.
+
+- The network reconstruction helper initially omitted the gRPC channel header;
+  Actions caught the missing CreateChannel/InsecureChannelCredentials declarations.
+- Actions passed the initial 87 C++ tests but rejected handwritten formatting.
+  Its actual formatter output was applied, not disabled. A later metadata-identity
+  regression test brings the suite to 88; the harness has 11 Python tests.
+- All 15 two-node loss pairs and corrupt-fragment reconstruction passed before
+  spare startup exposed a different failure: Compose recreated MGM, deleting the
+  container-local input and its volatile namespace. Starting spares with --no-deps
+  fixed both the erasure proof and benchmark. The object is now uploaded before
+  adding spares so the proof also catches accidental namespace replacement.
+- The final proof repairs a data slot and a parity slot onto two distinct spares
+  while their original holders remain DOWN. A separate no-spare three-loss case
+  fails cleanly and preserves the existing output; repair cannot mask that loss.
+- A compiler signedness warning came from comparing protobuf's int count with
+  size_t. Completion now compares matching count types without changing policy.
+- Fresh aligned files measured 3x versus 1.5x chunk-file bytes. Padding, sidecars,
+  markers, retained returning copies, and filesystem block allocation are different
+  costs; the raw record separates the measured marker/checksum bytes.
+
+[RS proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081711607);
+[layout comparison](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081355339);
+[current raw measurements](docs/benchmark-results.json).

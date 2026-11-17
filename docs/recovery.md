@@ -77,15 +77,17 @@ copies of a chunk. No automatic excess-copy trimming is implemented.
 
 ## Capacity and failure limits
 
-Three distinct replicas require three healthy storage nodes. The default stack
-has four FSTs so one can be a replacement. Four containers/volumes on one machine
-are not independent physical disks, racks, or machine-failure domains.
+Three distinct replicas require three healthy storage nodes. The replica3 proof
+uses four FSTs, including a spare. The default stack has eight to support
+[RS42 repair](erasure-coding.md). Containers/volumes on one machine are not
+independent physical disks, racks, or machine-failure domains.
 
 If two nodes fail, reads work while at least one eligible checksum-valid copy of
 each chunk survives. Full RF=3 cannot be restored with only two healthy nodes.
 When every copy is offline, reads are unavailable; stopping processes does not
 by itself erase their disks. Permanent loss/corruption of every copy makes that
-chunk unrecoverable; no erasure coding or external backup is present.
+chunk unrecoverable. Replica3 files have no parity or external backup; choosing
+RS42 is a separate per-file layout, not protection added to existing replicas.
 
 MGM metadata remains in memory. Heartbeats re-register nodes after MGM restarts,
 but cannot reconstruct the lost namespace. There is no metadata HA, TLS/auth,

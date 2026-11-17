@@ -3,8 +3,9 @@
 ## Disk format
 
 The chunk-size constant is `objectstore::kChunkSize` in `src/common/chunk.h`:
-1,048,576 bytes (1 MiB). Only the last chunk may be shorter. An empty object has
-zero chunks. Direct FST API use creates an empty manifest; replicated-client
+1,048,576 bytes (1 MiB). Replica3 only shortens the last chunk; RS42 uses up to
+six 1 MiB fragments per 4 MiB stripe, with padded tail fragments. An empty object has
+zero chunks. Direct FST API use creates an empty manifest; MGM-client
 empty files live only in MGM metadata, without FST directories.
 
 ```text
@@ -26,12 +27,14 @@ integers; manifests contain at most UINT32_MAX chunks.
 `pending`, `manifest`, and `repair` use the same ASCII size/count format:
 
 ```text
-<size_bytes> <chunk_count>\n
+<size_bytes> <chunk_count> <layout>\n
 ```
 
-For example, `1048583 2` followed by a newline describes a full first chunk and
-a seven-byte final chunk. `0 0` describes an empty object. The count must equal
-`ceil(size_bytes / 1048576)`; readers validate that invariant.
+New markers store layout 0 (`replica3`) or 1 (`rs42`). Legacy two-field markers
+are read as replica3. `1048583 2 0` describes a full replicated chunk and a
+seven-byte tail. The count is `ceil(size / 1 MiB)` for replica3 and
+`6 * ceil(size / 4 MiB)` for RS42. The size remains the logical file size, not
+local fragment bytes; readers validate the layout-specific count and lengths.
 
 Each `.crc` contains exactly 16 hexadecimal digits followed by a newline:
 xxHash64, seed 0, digest of the raw chunk bytes. The empty-input digest is
@@ -55,7 +58,7 @@ checksum. This detects accidental corruption; it does not authenticate data,
 replace TLS, or recover bytes. Replicated reads can use another verified copy;
 automatic node-failure repair is described in [recovery](recovery.md).
 
-## Upload and read lifecycle
+## Replica3 upload and read lifecycle
 
 1. `BeginObject(object_id, size_bytes)` reserves a directory and writes `pending`.
    Existing IDs return `ALREADY_EXISTS`, including incomplete uploads.
@@ -79,7 +82,8 @@ FST-local. MGM supplies placement and completion metadata but never proxies
 file bytes. `Scrub` remains `UNIMPLEMENTED`.
 
 The client sends one unary RPC per chunk, not one whole-file message or a gRPC
-streaming RPC. Chunk payload buffering is bounded by chunk size; MGM metadata
+streaming RPC. Replica3 payload buffering is bounded by chunk size; RS buffers one 4 MiB stripe
+plus its fragments. MGM metadata
 still grows with file/chunk count. Direct FST empty objects use begin/finish;
 replicated empty files are metadata-only. Upload errors leave a reserved object rather
 than silently treating missing chunks as end-of-file. To retry, remove the ID
@@ -120,8 +124,8 @@ The CLI prints the numeric RPC status and message and returns nonzero.
   The two files of a chunk are not committed atomically as a pair.
 - Manifests are validated but not checksummed. There are no versioned schemas,
   upload sessions, quotas, garbage collection, or partial-upload cleanup daemon.
-- See [replication protocol](replication.md) for MGM ownership and fallback. No
-  erasure coding, scrubber, TLS, or authentication. Failure recovery is described
+- See [replication protocol](replication.md) and [erasure coding](erasure-coding.md)
+  for MGM ownership and fallback. No scrubber, TLS, or authentication. Recovery is described
   in [recovery](recovery.md).
   The network is for trusted local development.
 
@@ -132,3 +136,8 @@ can serve each verified installed pair independently; whole-object
 `GetObjectInfo` still requires an original completed manifest. `InstallChunk`
 rejects pending upload directories. Sparse repair publication never makes an
 unfinished original upload readable.
+
+RS uploads also use sparse `repair` markers from the start; a node stores only
+its assigned slots. MGM completion, not an FST whole-object manifest, publishes
+the file. A direct FST chunk read may see verified uploaded bytes before MGM
+completion; the normal client refuses incomplete files.

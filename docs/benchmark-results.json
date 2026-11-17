@@ -1,16 +1,16 @@
 {
   "environment": {
-    "measured_at_utc": "2026-11-17T11:34:54.568770+00:00",
-    "revision": "3c2dcb23c1ada8f1413217ac0f8a3855a1431b95",
-    "actions_url": "https://github.com/IV-cmd/distributed-object-store/actions/runs/44075050655",
+    "measured_at_utc": "2026-11-17T12:16:08.204058+00:00",
+    "revision": "4f6d08b79eca92114852b7db7623e729aeca2264",
+    "actions_url": "https://github.com/IV-cmd/distributed-object-store/actions/runs/44081355339",
     "runner_os": "ubuntu24",
-    "kernel": "7.0.0-1014-aws",
-    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "kernel": "7.0.0-1017-azure",
+    "cpu_model": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
     "docker": {
       "version": "28.0.4",
       "storage_driver": "overlay2",
       "cpus": 4,
-      "memory_bytes": 16464306176
+      "memory_bytes": 16759308288
     },
     "compose": "2.38.2",
     "heartbeat_interval_ms": 2000,
@@ -18,221 +18,488 @@
     "repair_interval_ms": 500
   },
   "trials": 3,
-  "method": "Single client, sequential RF=3 writes, warm OS cache, no fsync; client steady-clock Put/Get timer includes file I/O and RPCs, excludes Docker/process startup; decimal MB/s, binary MiB sizes. Degraded latency is post-DOWN with no spare started, not timeout cost. Rebuild uses same-host millisecond MGM log timestamps.",
+  "method": "Single client; sequential replica3 or rs42 writes; 4 MiB RS stripes, at most 1 MiB per fragment; warm OS cache, no fsync. Client steady-clock Put/Get timer includes codec, file I/O and RPCs, excludes Docker/process startup; decimal MB/s, binary MiB sizes. Three initial replica3 holders or six rs42 holders on one host. Degraded latency is one holder post-DOWN with no spare, not timeout cost; RS reconstruction asserted in every degraded sample. Storage sums actual .chunk file lengths; marker/checksum byte lengths recorded separately; filesystem block allocation is not measured. Synthetic repeating bytes 0..255; replica3 measured before rs42. Rebuild is replica3 only, using same-host millisecond MGM log timestamps.",
   "samples": [
     {
       "operation": "put",
       "bytes": 1048576,
-      "seconds": 0.016936069,
-      "MB_per_s": 61.913777,
+      "seconds": 0.039631267,
+      "MB_per_s": 26.4583012,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 1048576,
-      "seconds": 0.006008965,
-      "MB_per_s": 174.501932,
+      "seconds": 0.015444987,
+      "MB_per_s": 67.8910251,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 1048576,
-      "seconds": 0.014267373,
-      "MB_per_s": 73.4946791,
+      "seconds": 0.029960315,
+      "MB_per_s": 34.998831,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 1048576,
-      "seconds": 0.006330229,
-      "MB_per_s": 165.645824,
+      "seconds": 0.013565478,
+      "MB_per_s": 77.2973868,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 1048576,
-      "seconds": 0.014342184,
-      "MB_per_s": 73.1113197,
+      "seconds": 0.038497361,
+      "MB_per_s": 27.2376073,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 1048576,
-      "seconds": 0.006084782,
-      "MB_per_s": 172.32762,
+      "seconds": 0.016492585,
+      "MB_per_s": 63.5786325,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 16777216,
-      "seconds": 0.093704587,
-      "MB_per_s": 179.0437,
+      "seconds": 0.121249114,
+      "MB_per_s": 138.369803,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.060001661,
-      "MB_per_s": 279.612526,
+      "seconds": 0.161595505,
+      "MB_per_s": 103.822294,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 16777216,
-      "seconds": 0.093351239,
-      "MB_per_s": 179.721407,
+      "seconds": 0.121535184,
+      "MB_per_s": 138.044107,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.059003878,
-      "MB_per_s": 284.340904,
+      "seconds": 0.150133856,
+      "MB_per_s": 111.748385,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 16777216,
-      "seconds": 0.093834764,
-      "MB_per_s": 178.795313,
+      "seconds": 0.116818412,
+      "MB_per_s": 143.617908,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.056963215,
-      "MB_per_s": 294.527196,
+      "seconds": 0.142163364,
+      "MB_per_s": 118.01364,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 67108864,
-      "seconds": 0.316346482,
-      "MB_per_s": 212.137222,
+      "seconds": 0.411099737,
+      "MB_per_s": 163.242294,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 67108864,
-      "seconds": 0.217633664,
-      "MB_per_s": 308.357001,
+      "seconds": 0.536856183,
+      "MB_per_s": 125.003429,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 67108864,
-      "seconds": 0.315578321,
-      "MB_per_s": 212.653594,
+      "seconds": 0.407940135,
+      "MB_per_s": 164.506648,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 67108864,
-      "seconds": 0.225734726,
-      "MB_per_s": 297.29083,
+      "seconds": 0.546946952,
+      "MB_per_s": 122.697208,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "put",
       "bytes": 67108864,
-      "seconds": 0.319273672,
-      "MB_per_s": 210.192289,
+      "seconds": 0.409565305,
+      "MB_per_s": 163.853879,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 67108864,
-      "seconds": 0.207197195,
-      "MB_per_s": 323.888863,
+      "seconds": 0.597989971,
+      "MB_per_s": 112.224063,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "throughput"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.059966447,
-      "MB_per_s": 279.776722,
+      "seconds": 0.139881135,
+      "MB_per_s": 119.93909,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "latency-healthy"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.056002721,
-      "MB_per_s": 299.578587,
+      "seconds": 0.122459262,
+      "MB_per_s": 137.002426,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "latency-healthy"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.058472403,
-      "MB_per_s": 286.925372,
+      "seconds": 0.15586882,
+      "MB_per_s": 107.636768,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "latency-healthy"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.06176089,
-      "MB_per_s": 271.647899,
+      "seconds": 0.174364945,
+      "MB_per_s": 96.2189734,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "latency-degraded"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.056131404,
-      "MB_per_s": 298.891793,
+      "seconds": 0.137660489,
+      "MB_per_s": 121.873866,
+      "layout": "replica3",
+      "reconstructed": false,
       "phase": "latency-degraded"
     },
     {
       "operation": "get",
       "bytes": 16777216,
-      "seconds": 0.05709223,
-      "MB_per_s": 293.861634,
+      "seconds": 0.129466905,
+      "MB_per_s": 129.586909,
+      "layout": "replica3",
+      "reconstructed": false,
+      "phase": "latency-degraded"
+    },
+    {
+      "operation": "put",
+      "bytes": 1048576,
+      "seconds": 0.055662931,
+      "MB_per_s": 18.8379588,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 1048576,
+      "seconds": 0.047810486,
+      "MB_per_s": 21.9319251,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 1048576,
+      "seconds": 0.062863887,
+      "MB_per_s": 16.6801012,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 1048576,
+      "seconds": 0.028432367,
+      "MB_per_s": 36.879659,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 1048576,
+      "seconds": 0.055911775,
+      "MB_per_s": 18.7541175,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 1048576,
+      "seconds": 0.033336108,
+      "MB_per_s": 31.4546617,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 16777216,
+      "seconds": 0.24291895,
+      "MB_per_s": 69.0650771,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.148374237,
+      "MB_per_s": 113.073646,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 16777216,
+      "seconds": 0.24238363,
+      "MB_per_s": 69.2176118,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.180320797,
+      "MB_per_s": 93.0409375,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 16777216,
+      "seconds": 0.263615756,
+      "MB_per_s": 63.6426906,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.158338149,
+      "MB_per_s": 105.958142,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 67108864,
+      "seconds": 0.936713324,
+      "MB_per_s": 71.6429053,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 67108864,
+      "seconds": 0.624469217,
+      "MB_per_s": 107.465448,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 67108864,
+      "seconds": 0.925282768,
+      "MB_per_s": 72.5279518,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 67108864,
+      "seconds": 0.660625797,
+      "MB_per_s": 101.583778,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "put",
+      "bytes": 67108864,
+      "seconds": 0.93495273,
+      "MB_per_s": 71.7778149,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 67108864,
+      "seconds": 0.594804115,
+      "MB_per_s": 112.825151,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "throughput"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.160361883,
+      "MB_per_s": 104.620972,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "latency-healthy"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.160130954,
+      "MB_per_s": 104.771848,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "latency-healthy"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.174271289,
+      "MB_per_s": 96.2706829,
+      "layout": "rs42",
+      "reconstructed": false,
+      "phase": "latency-healthy"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.25790933,
+      "MB_per_s": 65.0508301,
+      "layout": "rs42",
+      "reconstructed": true,
+      "phase": "latency-degraded"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.299456765,
+      "MB_per_s": 56.0255034,
+      "layout": "rs42",
+      "reconstructed": true,
+      "phase": "latency-degraded"
+    },
+    {
+      "operation": "get",
+      "bytes": 16777216,
+      "seconds": 0.261466119,
+      "MB_per_s": 64.1659274,
+      "layout": "rs42",
+      "reconstructed": true,
       "phase": "latency-degraded"
     }
   ],
-  "degraded_node_states": "node_id=fst1 state=UP chunks=16 free_bytes=94119227392\nnode_id=fst2 state=DOWN chunks=16 free_bytes=94152777728\nnode_id=fst3 state=UP chunks=16 free_bytes=94119227392\nnodes OK\n",
+  "degraded_node_states": {
+    "replica3": "node_id=fst1 state=UP chunks=16 free_bytes=90681614336\nnode_id=fst2 state=DOWN chunks=0 free_bytes=90748936192\nnode_id=fst3 state=UP chunks=16 free_bytes=90681614336\nnodes OK\n",
+    "rs42": "node_id=fst1 state=UP chunks=4 free_bytes=90705317888\nnode_id=fst2 state=DOWN chunks=4 free_bytes=90738864128\nnode_id=fst3 state=UP chunks=4 free_bytes=90705317888\nnode_id=fst4 state=UP chunks=4 free_bytes=90705317888\nnode_id=fst5 state=UP chunks=4 free_bytes=90705317888\nnode_id=fst6 state=UP chunks=4 free_bytes=90705317888\nnodes OK\n"
+  },
   "rebuild": {
     "object_bytes": 67108864,
     "chunks": 64,
-    "kill_requested_ms": 1794915308732,
-    "down_ms": 1794915313919,
-    "rf3_ms": 1794915345868,
-    "kill_to_down_s": 5.187,
-    "down_to_rf3_s": 31.949,
-    "kill_to_rf3_s": 37.136
+    "kill_requested_ms": 1794917787117,
+    "down_ms": 1794917791808,
+    "rf3_ms": 1794917824513,
+    "kill_to_down_s": 4.691,
+    "down_to_rf3_s": 32.705,
+    "kill_to_rf3_s": 37.396
   },
   "events": [
     {
-      "timestamp_ms": "1794915294012",
-      "event": "node_registered",
-      "node": "fst2",
-      "endpoint": "fst2:50052"
-    },
-    {
-      "timestamp_ms": "1794915294026",
+      "timestamp_ms": "1794917767447",
       "event": "node_registered",
       "node": "fst1",
       "endpoint": "fst1:50052"
     },
     {
-      "timestamp_ms": "1794915294028",
+      "timestamp_ms": "1794917767462",
+      "event": "node_registered",
+      "node": "fst2",
+      "endpoint": "fst2:50052"
+    },
+    {
+      "timestamp_ms": "1794917767463",
       "event": "node_registered",
       "node": "fst3",
       "endpoint": "fst3:50052"
     },
     {
-      "timestamp_ms": "1794915306414",
+      "timestamp_ms": "1794917783804",
       "event": "node_down",
       "node": "fst2",
       "affected_chunks": "16"
     },
     {
-      "timestamp_ms": "1794915307623",
+      "timestamp_ms": "1794917785584",
       "event": "node_rejoining",
       "node": "fst2",
       "endpoint": "fst2:50052"
     },
     {
-      "timestamp_ms": "1794915307631",
+      "timestamp_ms": "1794917785600",
       "event": "node_up",
       "node": "fst2",
       "verified": "16",
@@ -241,19 +508,19 @@
       "unexpected": "0"
     },
     {
-      "timestamp_ms": "1794915308089",
+      "timestamp_ms": "1794917786256",
       "event": "node_registered",
       "node": "fst4",
       "endpoint": "fst4:50052"
     },
     {
-      "timestamp_ms": "1794915313919",
+      "timestamp_ms": "1794917791808",
       "event": "node_down",
       "node": "fst2",
       "affected_chunks": "64"
     },
     {
-      "timestamp_ms": "1794915313919",
+      "timestamp_ms": "1794917791809",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "0",
@@ -261,7 +528,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915313931",
+      "timestamp_ms": "1794917791827",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "0",
@@ -269,7 +536,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915314432",
+      "timestamp_ms": "1794917792327",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "2",
@@ -277,7 +544,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915314438",
+      "timestamp_ms": "1794917792346",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "2",
@@ -285,7 +552,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915314938",
+      "timestamp_ms": "1794917792847",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "4",
@@ -293,7 +560,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915314944",
+      "timestamp_ms": "1794917792864",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "4",
@@ -301,7 +568,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915315445",
+      "timestamp_ms": "1794917793365",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "6",
@@ -309,7 +576,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915315453",
+      "timestamp_ms": "1794917793384",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "6",
@@ -317,7 +584,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915315954",
+      "timestamp_ms": "1794917793885",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "8",
@@ -325,7 +592,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915315961",
+      "timestamp_ms": "1794917793909",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "8",
@@ -333,7 +600,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915316461",
+      "timestamp_ms": "1794917794410",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "10",
@@ -341,7 +608,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915316467",
+      "timestamp_ms": "1794917794434",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "10",
@@ -349,7 +616,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915316967",
+      "timestamp_ms": "1794917794935",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "12",
@@ -357,7 +624,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915316973",
+      "timestamp_ms": "1794917794951",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "12",
@@ -365,7 +632,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915317474",
+      "timestamp_ms": "1794917795452",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "14",
@@ -373,7 +640,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915317478",
+      "timestamp_ms": "1794917795473",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "14",
@@ -381,7 +648,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915317979",
+      "timestamp_ms": "1794917795974",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "16",
@@ -389,7 +656,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915317986",
+      "timestamp_ms": "1794917795988",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "16",
@@ -397,7 +664,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915318486",
+      "timestamp_ms": "1794917796489",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "18",
@@ -405,7 +672,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915318493",
+      "timestamp_ms": "1794917796506",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "18",
@@ -413,7 +680,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915318994",
+      "timestamp_ms": "1794917797007",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "20",
@@ -421,7 +688,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915319001",
+      "timestamp_ms": "1794917797022",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "20",
@@ -429,7 +696,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915319501",
+      "timestamp_ms": "1794917797523",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "22",
@@ -437,7 +704,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915319506",
+      "timestamp_ms": "1794917797539",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "22",
@@ -445,7 +712,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915320007",
+      "timestamp_ms": "1794917798040",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "24",
@@ -453,7 +720,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915320014",
+      "timestamp_ms": "1794917798058",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "24",
@@ -461,7 +728,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915320514",
+      "timestamp_ms": "1794917798558",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "26",
@@ -469,7 +736,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915320521",
+      "timestamp_ms": "1794917798570",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "26",
@@ -477,7 +744,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915321021",
+      "timestamp_ms": "1794917799071",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "28",
@@ -485,7 +752,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915321027",
+      "timestamp_ms": "1794917799091",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "28",
@@ -493,7 +760,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915321528",
+      "timestamp_ms": "1794917799592",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "30",
@@ -501,7 +768,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915321534",
+      "timestamp_ms": "1794917799606",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "30",
@@ -509,7 +776,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915322034",
+      "timestamp_ms": "1794917800107",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "32",
@@ -517,7 +784,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915322041",
+      "timestamp_ms": "1794917800127",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "32",
@@ -525,7 +792,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915322542",
+      "timestamp_ms": "1794917800628",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "34",
@@ -533,7 +800,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915322548",
+      "timestamp_ms": "1794917800644",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "34",
@@ -541,7 +808,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915323049",
+      "timestamp_ms": "1794917801145",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "36",
@@ -549,7 +816,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915323055",
+      "timestamp_ms": "1794917801160",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "36",
@@ -557,7 +824,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915323555",
+      "timestamp_ms": "1794917801661",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "38",
@@ -565,7 +832,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915323562",
+      "timestamp_ms": "1794917801681",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "38",
@@ -573,7 +840,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915324062",
+      "timestamp_ms": "1794917802182",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "40",
@@ -581,7 +848,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915324069",
+      "timestamp_ms": "1794917802209",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "40",
@@ -589,7 +856,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915324569",
+      "timestamp_ms": "1794917802710",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "42",
@@ -597,7 +864,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915324576",
+      "timestamp_ms": "1794917802728",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "42",
@@ -605,7 +872,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915325077",
+      "timestamp_ms": "1794917803229",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "44",
@@ -613,7 +880,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915325083",
+      "timestamp_ms": "1794917803247",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "44",
@@ -621,7 +888,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915325583",
+      "timestamp_ms": "1794917803748",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "46",
@@ -629,7 +896,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915325592",
+      "timestamp_ms": "1794917803762",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "46",
@@ -637,7 +904,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915326093",
+      "timestamp_ms": "1794917804263",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "48",
@@ -645,7 +912,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915326098",
+      "timestamp_ms": "1794917804279",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "48",
@@ -653,7 +920,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915326599",
+      "timestamp_ms": "1794917804780",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "50",
@@ -661,7 +928,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915326604",
+      "timestamp_ms": "1794917804795",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "50",
@@ -669,7 +936,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915327104",
+      "timestamp_ms": "1794917805296",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "52",
@@ -677,7 +944,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915327110",
+      "timestamp_ms": "1794917805323",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "52",
@@ -685,7 +952,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915327610",
+      "timestamp_ms": "1794917805824",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "54",
@@ -693,7 +960,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915327615",
+      "timestamp_ms": "1794917805835",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "54",
@@ -701,7 +968,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915328116",
+      "timestamp_ms": "1794917806336",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "56",
@@ -709,7 +976,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915328127",
+      "timestamp_ms": "1794917806362",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "56",
@@ -717,7 +984,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915328628",
+      "timestamp_ms": "1794917806863",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "58",
@@ -725,7 +992,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915328634",
+      "timestamp_ms": "1794917806876",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "58",
@@ -733,7 +1000,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915329134",
+      "timestamp_ms": "1794917807377",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "60",
@@ -741,7 +1008,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915329143",
+      "timestamp_ms": "1794917807397",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "60",
@@ -749,7 +1016,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915329643",
+      "timestamp_ms": "1794917807898",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "62",
@@ -757,7 +1024,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915329649",
+      "timestamp_ms": "1794917807913",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "62",
@@ -765,7 +1032,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915330150",
+      "timestamp_ms": "1794917808414",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "1",
@@ -773,7 +1040,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915330155",
+      "timestamp_ms": "1794917808432",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "1",
@@ -781,7 +1048,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915330656",
+      "timestamp_ms": "1794917808933",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "7",
@@ -789,7 +1056,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915330663",
+      "timestamp_ms": "1794917808947",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "7",
@@ -797,7 +1064,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915331163",
+      "timestamp_ms": "1794917809448",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "13",
@@ -805,7 +1072,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915331170",
+      "timestamp_ms": "1794917809471",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "13",
@@ -813,7 +1080,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915331670",
+      "timestamp_ms": "1794917809971",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "19",
@@ -821,7 +1088,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915331676",
+      "timestamp_ms": "1794917809988",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "19",
@@ -829,7 +1096,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915332176",
+      "timestamp_ms": "1794917810489",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "25",
@@ -837,7 +1104,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915332181",
+      "timestamp_ms": "1794917810501",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "25",
@@ -845,7 +1112,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915332681",
+      "timestamp_ms": "1794917811002",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "31",
@@ -853,7 +1120,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915332688",
+      "timestamp_ms": "1794917811037",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "31",
@@ -861,7 +1128,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915333189",
+      "timestamp_ms": "1794917811537",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "37",
@@ -869,7 +1136,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915333197",
+      "timestamp_ms": "1794917811549",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "37",
@@ -877,7 +1144,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915333697",
+      "timestamp_ms": "1794917812049",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "43",
@@ -885,7 +1152,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915333704",
+      "timestamp_ms": "1794917812064",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "43",
@@ -893,7 +1160,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915334205",
+      "timestamp_ms": "1794917812565",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "49",
@@ -901,7 +1168,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915334210",
+      "timestamp_ms": "1794917812584",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "49",
@@ -909,7 +1176,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915334710",
+      "timestamp_ms": "1794917813085",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "55",
@@ -917,7 +1184,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915334717",
+      "timestamp_ms": "1794917813106",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "55",
@@ -925,7 +1192,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915335218",
+      "timestamp_ms": "1794917813606",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "61",
@@ -933,7 +1200,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915335223",
+      "timestamp_ms": "1794917813629",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "61",
@@ -941,7 +1208,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915335723",
+      "timestamp_ms": "1794917814130",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "5",
@@ -949,7 +1216,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915335730",
+      "timestamp_ms": "1794917814144",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "5",
@@ -957,7 +1224,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915336230",
+      "timestamp_ms": "1794917814645",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "17",
@@ -965,7 +1232,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915336238",
+      "timestamp_ms": "1794917814661",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "17",
@@ -973,7 +1240,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915336738",
+      "timestamp_ms": "1794917815161",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "29",
@@ -981,7 +1248,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915336749",
+      "timestamp_ms": "1794917815196",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "29",
@@ -989,7 +1256,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915337250",
+      "timestamp_ms": "1794917815697",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "41",
@@ -997,7 +1264,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915337256",
+      "timestamp_ms": "1794917815716",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "41",
@@ -1005,7 +1272,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915337757",
+      "timestamp_ms": "1794917816217",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "53",
@@ -1013,7 +1280,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915337763",
+      "timestamp_ms": "1794917816233",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "53",
@@ -1021,7 +1288,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915338264",
+      "timestamp_ms": "1794917816734",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "3",
@@ -1029,7 +1296,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915338268",
+      "timestamp_ms": "1794917816750",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "3",
@@ -1037,7 +1304,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915338769",
+      "timestamp_ms": "1794917817251",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "23",
@@ -1045,7 +1312,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915338775",
+      "timestamp_ms": "1794917817265",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "23",
@@ -1053,7 +1320,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915339276",
+      "timestamp_ms": "1794917817766",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "45",
@@ -1061,7 +1328,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915339282",
+      "timestamp_ms": "1794917817784",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "45",
@@ -1069,7 +1336,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915339783",
+      "timestamp_ms": "1794917818284",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "63",
@@ -1077,7 +1344,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915339790",
+      "timestamp_ms": "1794917818299",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "63",
@@ -1085,7 +1352,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915340290",
+      "timestamp_ms": "1794917818800",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "27",
@@ -1093,7 +1360,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915340295",
+      "timestamp_ms": "1794917818820",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "27",
@@ -1101,7 +1368,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915340795",
+      "timestamp_ms": "1794917819321",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "57",
@@ -1109,7 +1376,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915340801",
+      "timestamp_ms": "1794917819337",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "57",
@@ -1117,7 +1384,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915341302",
+      "timestamp_ms": "1794917819838",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "33",
@@ -1125,7 +1392,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915341309",
+      "timestamp_ms": "1794917819854",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "33",
@@ -1133,7 +1400,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915341809",
+      "timestamp_ms": "1794917820354",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "11",
@@ -1141,7 +1408,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915341817",
+      "timestamp_ms": "1794917820376",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "11",
@@ -1149,7 +1416,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915342317",
+      "timestamp_ms": "1794917820877",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "9",
@@ -1157,7 +1424,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915342323",
+      "timestamp_ms": "1794917820888",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "9",
@@ -1165,7 +1432,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915342823",
+      "timestamp_ms": "1794917821389",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "21",
@@ -1173,7 +1440,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915342829",
+      "timestamp_ms": "1794917821411",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "21",
@@ -1181,7 +1448,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915343329",
+      "timestamp_ms": "1794917821911",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "51",
@@ -1189,7 +1456,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915343335",
+      "timestamp_ms": "1794917821926",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "51",
@@ -1197,7 +1464,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915343835",
+      "timestamp_ms": "1794917822427",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "59",
@@ -1205,7 +1472,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915343842",
+      "timestamp_ms": "1794917822444",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "59",
@@ -1213,7 +1480,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915344343",
+      "timestamp_ms": "1794917822945",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "15",
@@ -1221,7 +1488,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915344349",
+      "timestamp_ms": "1794917822961",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "15",
@@ -1229,7 +1496,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915344849",
+      "timestamp_ms": "1794917823462",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "39",
@@ -1237,7 +1504,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915344855",
+      "timestamp_ms": "1794917823478",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "39",
@@ -1245,7 +1512,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915345355",
+      "timestamp_ms": "1794917823978",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "35",
@@ -1253,7 +1520,7 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915345362",
+      "timestamp_ms": "1794917823996",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "35",
@@ -1261,7 +1528,7 @@
       "replicas": "3"
     },
     {
-      "timestamp_ms": "1794915345862",
+      "timestamp_ms": "1794917824496",
       "event": "repair_started",
       "object": "rebuild",
       "chunk": "47",
@@ -1269,12 +1536,50 @@
       "target": "fst4"
     },
     {
-      "timestamp_ms": "1794915345868",
+      "timestamp_ms": "1794917824513",
       "event": "repair_completed",
       "object": "rebuild",
       "chunk": "47",
       "target": "fst4",
       "replicas": "3"
+    }
+  ],
+  "storage": [
+    {
+      "layout": "replica3",
+      "object_bytes": 1048576,
+      "payload_bytes": 3145728,
+      "marker_and_checksum_bytes": 87
+    },
+    {
+      "layout": "replica3",
+      "object_bytes": 16777216,
+      "payload_bytes": 50331648,
+      "marker_and_checksum_bytes": 858
+    },
+    {
+      "layout": "replica3",
+      "object_bytes": 67108864,
+      "payload_bytes": 201326592,
+      "marker_and_checksum_bytes": 3306
+    },
+    {
+      "layout": "rs42",
+      "object_bytes": 1048576,
+      "payload_bytes": 1572864,
+      "marker_and_checksum_bytes": 174
+    },
+    {
+      "layout": "rs42",
+      "object_bytes": 16777216,
+      "payload_bytes": 25165824,
+      "marker_and_checksum_bytes": 492
+    },
+    {
+      "layout": "rs42",
+      "object_bytes": 67108864,
+      "payload_bytes": 100663296,
+      "marker_and_checksum_bytes": 1716
     }
   ]
 }
