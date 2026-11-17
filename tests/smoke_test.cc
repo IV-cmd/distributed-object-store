@@ -98,7 +98,7 @@ TEST_F(MgmRpcTest, GetIsUnimplemented) {
             grpc::StatusCode::UNIMPLEMENTED);
 }
 
-TEST_F(MgmRpcTest, PutIsUnimplemented) {
+TEST_F(MgmRpcTest, PutReservesMetadata) {
   grpc::ClientContext context;
   context.set_deadline(std::chrono::system_clock::now() +
                        std::chrono::seconds(2));
@@ -106,8 +106,7 @@ TEST_F(MgmRpcTest, PutIsUnimplemented) {
   request.set_object_id("example");
   request.set_size_bytes(42);
   v1::PutResponse response;
-  EXPECT_EQ(stub_->Put(&context, request, &response).error_code(),
-            grpc::StatusCode::UNIMPLEMENTED);
+  EXPECT_TRUE(stub_->Put(&context, request, &response).ok());
 }
 
 }  // namespace

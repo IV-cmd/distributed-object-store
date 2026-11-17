@@ -5,6 +5,13 @@ package objectstore.v1;
 import "google/protobuf/empty.proto";
 
 service MgmService {
+  rpc AllocateChunk(ChunkId) returns (ReplicaPlan);
+  rpc CommitChunk(CommitChunkRequest) returns (google.protobuf.Empty);
+  rpc LocateChunk(ChunkId) returns (ChunkMetadata);
+  rpc StatFile(ObjectRequest) returns (FileMetadata);
+  rpc ListFiles(google.protobuf.Empty) returns (FileList);
+  rpc CompleteFile(ObjectRequest) returns (google.protobuf.Empty);
+  rpc DeleteFile(ObjectRequest) returns (google.protobuf.Empty);
   rpc Put(PutRequest) returns (PutResponse);
   rpc Get(GetRequest) returns (GetResponse);
   rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
@@ -31,6 +38,7 @@ message ChunkId {
 message NodeInfo {
   string node_id = 1;
   string endpoint = 2;
+  uint64 capacity_bytes = 3;
 }
 
 message ChunkLocation {
@@ -56,6 +64,7 @@ message ChunkStatus {
 message PutRequest {
   string object_id = 1;
   uint64 size_bytes = 2;
+  string name = 3;
 }
 
 message PutResponse {
@@ -122,4 +131,35 @@ message BeginObjectRequest {
 message ObjectInfo {
   uint64 size_bytes = 1;
   uint32 chunk_count = 2;
+}
+
+message ReplicaPlan {
+  repeated NodeInfo nodes = 1;
+}
+
+message CommitChunkRequest {
+  ChunkId chunk = 1;
+  repeated string node_ids = 2;
+  fixed64 checksum = 3;
+}
+
+message ChunkMetadata {
+  ChunkId chunk = 1;
+  repeated NodeInfo replicas = 2;
+  fixed64 checksum = 3;
+  bool committed = 4;
+}
+
+message FileMetadata {
+  string object_id = 1;
+  string name = 2;
+  uint64 size_bytes = 3;
+  uint32 chunk_count = 4;
+  bool complete = 5;
+  repeated ChunkMetadata chunks = 6;
+  repeated NodeInfo targets = 7;
+}
+
+message FileList {
+  repeated FileMetadata files = 1;
 }
