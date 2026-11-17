@@ -87,7 +87,7 @@ TEST_F(MgmRpcTest, RejectsMissingEndpoint) {
   EXPECT_FALSE(response.accepted());
 }
 
-TEST_F(MgmRpcTest, GetIsUnimplemented) {
+TEST_F(MgmRpcTest, MissingGetReturnsNotFound) {
   grpc::ClientContext context;
   context.set_deadline(std::chrono::system_clock::now() +
                        std::chrono::seconds(2));
@@ -95,7 +95,7 @@ TEST_F(MgmRpcTest, GetIsUnimplemented) {
   request.set_object_id("example");
   v1::GetResponse response;
   EXPECT_EQ(stub_->Get(&context, request, &response).error_code(),
-            grpc::StatusCode::UNIMPLEMENTED);
+            grpc::StatusCode::NOT_FOUND);
 }
 
 TEST_F(MgmRpcTest, PutReservesMetadata) {

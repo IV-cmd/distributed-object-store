@@ -7,6 +7,7 @@
 #include <syncstream>
 
 #include "common/chunk.h"
+#include "mgm/placement.h"
 
 namespace objectstore {
 namespace {
@@ -67,9 +68,65 @@ grpc::Status MgmService::Put(grpc::ServerContext*, const v1::PutRequest* request
   }
   auto& info = it->second.info;
   info.set_object_id(request->object_id());
-  info.set_name(request->name());
+  info.set_name(request->name().empty() ? request->object_id() : request->name());
   info.set_size_bytes(request->size_bytes());
   info.set_chunk_count(static_cast<std::uint32_t>(count));
+  return grpc::Status::OK;
+}
+
+grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
+                                       const v1::ChunkId* request,
+                                       v1::ReplicaPlan* response) {
+  const std::lock_guard lock(mutex_);
+  const auto file = files_.find(request->object_id());
+  if (file == files_.end()) {
+    return {StatusCode::NOT_FOUND, "file not found"};
+  }
+  auto& record = file->second;
+  if (request->index() >= record.info.chunk_count()) {
+    return {StatusCode::INVALID_ARGUMENT, "chunk index out of range"};
+  }
+  if (record.info.complete()) {
+    return {StatusCode::FAILED_PRECONDITION, "completed files are write-once"};
+  }
+  if (record.info.targets().empty()) {
+    std::vector<v1::NodeInfo> available;
+    for (const auto& [id, node] : nodes_) {
+      available.push_back(node);
+    }
+    const auto selected = SelectNodes(std::move(available), kReplicationFactor);
+    if (selected.size() != kReplicationFactor) {
+      return {StatusCode::RESOURCE_EXHAUSTED, "three distinct registered FSTs required"};
+    }
+    for (const auto& node : selected) {
+      *record.info.add_targets() = node;
+    }
+  }
+  auto [chunk, inserted] = record.chunks.try_emplace(request->index());
+  if (inserted) {
+    *chunk->second.mutable_chunk() = *request;
+  }
+  *response->mutable_nodes() = record.info.targets();
+  return grpc::Status::OK;
+}
+
+grpc::Status MgmService::Get(grpc::ServerContext*, const v1::GetRequest* request,
+                             v1::GetResponse* response) {
+  const std::lock_guard lock(mutex_);
+  const auto file = files_.find(request->object_id());
+  if (file == files_.end()) {
+    return {StatusCode::NOT_FOUND, "file not found"};
+  }
+  if (!file->second.info.complete()) {
+    return {StatusCode::FAILED_PRECONDITION, "file upload is incomplete"};
+  }
+  for (const auto& [index, chunk] : file->second.chunks) {
+    for (const auto& node : chunk.replicas()) {
+      auto* location = response->mutable_plan()->add_chunks();
+      *location->mutable_chunk() = chunk.chunk();
+      *location->mutable_node() = node;
+    }
+  }
   return grpc::Status::OK;
 }
 

@@ -16,6 +16,10 @@ class MgmService final : public v1::MgmService::Service {
                             v1::RegisterNodeResponse*) override;
   grpc::Status Put(grpc::ServerContext*, const v1::PutRequest*,
                    v1::PutResponse*) override;
+  grpc::Status AllocateChunk(grpc::ServerContext*, const v1::ChunkId*,
+                             v1::ReplicaPlan*) override;
+  grpc::Status Get(grpc::ServerContext*, const v1::GetRequest*,
+                   v1::GetResponse*) override;
   grpc::Status CommitChunk(grpc::ServerContext*, const v1::CommitChunkRequest*,
                            google::protobuf::Empty*) override;
   grpc::Status LocateChunk(grpc::ServerContext*, const v1::ChunkId*,
