@@ -138,7 +138,7 @@ def main():
         if cluster.client("ls").stdout.strip() != "ls OK":
             raise RuntimeError("Unexpected data would contaminate the rebuild volume")
 
-        cluster.compose("up", "-d", "fst4")
+        cluster.compose("up", "--no-deps", "-d", "fst4")
         cluster.wait_node("fst4", "UP")
         source = "/tmp/input-64MiB"
         cluster.client("put", source, "rebuild")

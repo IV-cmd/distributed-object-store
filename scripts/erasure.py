@@ -45,11 +45,12 @@ def main():
         cluster.client("rm", "rs-corrupt")
         print("PASS RS corrupt fragment: checksum rejection and byte-equal reconstruction", flush=True)
 
-        cluster.compose("up", "-d", "fst7", "fst8")
+        cluster.client("put", source, "rs-repair", "rs42")
+        cluster.compose("up", "--no-deps", "-d", "fst7", "fst8")
         for node in ("fst7", "fst8"):
             cluster.wait_node(node, "UP")
             assert cluster.compose("exec", "-T", node, "id", "-u").stdout.strip() != "0"
-        cluster.client("put", source, "rs-repair", "rs42")
+        cluster.client("stat", "rs-repair")
         cluster.compose("stop", "-t", "1", "fst1", "fst2")
         for node in ("fst1", "fst2"):
             cluster.wait_node(node, "DOWN")
