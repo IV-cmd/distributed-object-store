@@ -5,6 +5,8 @@
 #include <limits>
 #include <set>
 #include <syncstream>
+#include <utility>
+#include <vector>
 
 #include "common/chunk.h"
 #include "mgm/placement.h"
