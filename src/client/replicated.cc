@@ -10,6 +10,8 @@
 
 #include "client/client.h"
 #include "client/download.h"
+#include "client/erasure.h"
+#include "common/layout.h"
 #include "common/chunk.h"
 
 namespace objectstore {
@@ -154,7 +156,7 @@ ReplicatedClient::ReplicatedClient(
     : stub_(v1::MgmService::NewStub(channel)) {}
 
 grpc::Status ReplicatedClient::Put(const std::filesystem::path& file,
-                                   const std::string& object_id) {
+                                   const std::string& object_id, v1::Layout layout) {
   std::ifstream input(file, std::ios::binary);
   if (!input) {
     throw std::runtime_error("cannot open input file");
@@ -164,12 +166,16 @@ grpc::Status ReplicatedClient::Put(const std::filesystem::path& file,
   create.set_object_id(object_id);
   create.set_name(file.filename().string());
   create.set_size_bytes(size);
+  create.set_layout(layout);
   v1::PutResponse response;
   grpc::ClientContext create_context;
   Deadline(create_context);
   auto status = stub_->Put(&create_context, create, &response);
   if (!status.ok()) {
     return status;
+  }
+  if (layout == v1::RS42) {
+    return PutErasure(*stub_, input, object_id, size);
   }
   std::vector<Replica> replicas;
   std::string bytes;
@@ -248,13 +254,23 @@ grpc::Status ReplicatedClient::Get(const std::string& object_id,
   if (!info.complete()) {
     return {grpc::StatusCode::FAILED_PRECONDITION, "file upload is incomplete"};
   }
-  if (info.chunk_count() != ChunkCount(info.size_bytes())) {
+  if (!v1::Layout_IsValid(info.layout()) ||
+      info.chunk_count() != LayoutChunkCount(info.layout(), info.size_bytes())) {
     return {grpc::StatusCode::DATA_LOSS, "invalid MGM metadata"};
   }
   const Download download(file);
   std::ofstream output;
   output.exceptions(std::ios::failbit | std::ios::badbit);
   output.open(download.File(), std::ios::binary | std::ios::trunc);
+  if (info.layout() == v1::RS42) {
+    status = ReadErasure(info, output);
+    if (!status.ok()) {
+      return status;
+    }
+    output.close();
+    std::filesystem::rename(download.File(), file);
+    return grpc::Status::OK;
+  }
   auto remaining = info.size_bytes();
   for (std::uint32_t index = 0; index < info.chunk_count(); ++index) {
     v1::ChunkId request;

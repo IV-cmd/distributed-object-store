@@ -8,3 +8,7 @@ add_library(objectstore_common chunk.cc)
 target_include_directories(objectstore_common PUBLIC "${PROJECT_SOURCE_DIR}/src")
 target_include_directories(objectstore_common SYSTEM PRIVATE "${XXHASH_INCLUDE_DIR}")
 target_link_libraries(objectstore_common PUBLIC rs_codec "${XXHASH_LIBRARY}")
+
+add_library(objectstore_transfer rs_transfer.cc)
+target_include_directories(objectstore_transfer PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(objectstore_transfer PUBLIC objectstore_proto objectstore_common)

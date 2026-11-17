@@ -27,7 +27,8 @@ class ReplicatedClient {
   explicit ReplicatedClient(const std::shared_ptr<grpc::Channel>& channel);
 
   grpc::Status Put(const std::filesystem::path& file,
-                   const std::string& object_id);
+                   const std::string& object_id,
+                   v1::Layout layout = v1::REPLICA3);
   grpc::Status Get(const std::string& object_id,
                    const std::filesystem::path& file);
   grpc::Status Remove(const std::string& object_id);
