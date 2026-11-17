@@ -1,165 +1,146 @@
-# Distributed Object Store with Replication & Erasure Coding
+# Distributed Object Store
 
 [![CI](https://github.com/IV-cmd/distributed-object-store/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/IV-cmd/distributed-object-store/actions/workflows/ci.yml)
 
-An EOS-inspired C++20 learning project for graduate/junior systems roles.
-The metadata server (MGM) and storage nodes (FSTs) follow the broad separation
-used by CERN EOS. This independent project is not CERN EOS or an affiliated
-implementation.
-
-**Foundation only: build skeleton + gRPC plumbing + CI. Not a working object store.**
-No objects, metadata, or node registrations are persisted. The title describes
-the intended project, not implemented storage features.
+An independent, EOS-inspired C++20 learning project. One storage node currently
+stores objects as checksummed files and serves them over gRPC. Replication and
+erasure coding are planned, **not implemented**. This is not CERN EOS or an
+affiliated implementation.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    client[CLI client] -->|Get / Put: UNIMPLEMENTED| mgm[Metadata server: MGM]
-    mgm -. Placement: planned .-> nodes
-    subgraph nodes[Storage nodes: FST]
-        f1[FST 1]
-        f2[FST 2]
-        f3[FST 3]
-    end
-    f1 -->|RegisterNode| mgm
-    f2 -->|RegisterNode| mgm
-    f3 -->|RegisterNode| mgm
+    client[CLI client] -->|Object lifecycle and chunk RPCs| fst[One storage node: FST]
+    fst -->|Read / write / verify| disk[Local chunks + checksum sidecars + manifest]
+    client -. Planned metadata lookup .-> mgm[Metadata server: MGM stub]
 ```
 
-Solid arrows are current RPC calls. The dashed arrow is planned; the MGM does
-not yet call FSTs or choose chunk placements.
+The data path is `client → FST → disk`; MGM is not involved. The separate `mgm`
+binary retains its registration handler and unimplemented placement methods.
+FST does not register with MGM or perform background work.
 
 ## What exists
 
-- C++20 executables: `mgm`, `fst`, and `client`.
-- Protobuf messages and generated gRPC stubs under package `objectstore.v1`.
-- MGM `RegisterNode`: validates nonempty node ID/endpoint, logs, and acknowledges.
-  It does **not** maintain a node registry or check endpoint reachability.
-- MGM `Get`/`Put`: return gRPC `UNIMPLEMENTED` (code 12) with an explicit message.
-- MGM `Heartbeat`/`ReportChunkStatus` and all FST methods: generated
-  `UNIMPLEMENTED` handlers. No storage, scrubbing, or liveness tracking.
-- Each FST serves its RPC interface and registers once on startup. Registration
-  waits for MGM readiness with a 15-second deadline; failure exits nonzero.
-- GoogleTest smoke tests, container smoke checks, and GitHub Actions CI.
+- C++20 `fst`, `client`, and `mgm` executables; CMake-generated Protobuf/gRPC code.
+- Fixed 1 MiB chunks, shared chunking and xxHash64 code, read/write verification.
+- Write-once object IDs, local size/chunk-count manifests, explicit upload finish.
+- `client put`, `get`, and `rm` talking directly to one configured FST.
+- GoogleTest unit and real-gRPC integration tests, including corrupt stored bytes.
+- A one-FST Compose environment with a persistent named volume.
+- GCC/Clang builds, clang-format/clang-tidy, and container checks in Actions.
 
-## Layout
-
-```text
-proto/            RPC definitions and protobuf/gRPC code generation
-src/mgm/          Metadata service and server entry point
-src/fst/          Storage-node stub and MGM registration client
-src/client/       Get/Put CLI
-src/common/       Reserved; no shared code yet
-tests/            GoogleTest smoke tests
-docker/           Multi-stage Dockerfile and four-container Compose definition
-scripts/          Compose smoke check
-```
+See [storage layout and protocol](docs/storage-layout.md) for formats, status
+codes, and limits. xxHash64 detects accidental corruption, not malicious changes.
 
 ## Build and test
 
 Ubuntu 24.04 is the reference environment. Requires CMake >= 3.24, GCC 13 or
-Clang 18, gRPC/Protobuf development packages, and GoogleTest. Dependencies are
-installed from Ubuntu packages; CMake does not download source dependencies.
+Clang 18, gRPC/Protobuf, xxHash, and GoogleTest. CMake uses installed packages;
+it does not download source dependencies.
 
 ```sh
 sudo apt-get update
 sudo apt-get install -y g++ cmake ninja-build libgrpc++-dev libprotobuf-dev \
-  protobuf-compiler protobuf-compiler-grpc libgtest-dev
+  protobuf-compiler protobuf-compiler-grpc libgtest-dev libxxhash-dev
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 ```
 
-To select Clang, add `-DCMAKE_CXX_COMPILER=clang++-18` in a fresh build directory
-(after installing `clang-18`). Generated protobuf files stay in the build tree.
-For server/client builds without tests, configure with `-DBUILD_TESTING=OFF`.
+Select Clang with `-DCMAKE_CXX_COMPILER=clang++-18` in a fresh build directory.
+Use `-DBUILD_TESTING=OFF` for a server/client-only build. Generated sources stay
+in the build tree. Tests bind ephemeral loopback ports and use temporary data.
 
-Smoke tests cover a nested protobuf round-trip, accepted registration, rejected
-missing registration fields, and `UNIMPLEMENTED` Get/Put replies over real gRPC
-connections to an in-process MGM on an ephemeral loopback port.
+## Run one storage node
 
-## Run the development cluster
-
-Requires Docker Engine, Compose **v2.20 or newer** (for `include`), and Make.
-The root Compose file includes the definition in `docker/`.
+Requires Docker Engine, Compose **v2.20+**, and Make. The root Compose file
+includes the definition in `docker/`.
 
 ```sh
-make dev
-# Equivalent: docker compose up --build -d
-# With the modern standalone Compose executable: docker-compose up --build
+make dev                       # docker compose up --build -d
+printf 'hello object store\n' > example.txt
+docker compose cp example.txt fst:/tmp/input
 
-docker compose ps
-docker compose logs mgm fst-1 fst-2 fst-3
-```
+docker compose exec -T fst client put /tmp/input example
+docker compose exec -T fst client get example /tmp/output
+docker compose cp fst:/tmp/output ./output.txt
+cmp example.txt output.txt
+docker compose exec -T fst client rm example
 
-This starts one MGM plus three separate FST containers on a shared bridge
-network. Each FST advertises a distinct DNS endpoint such as `fst-1:50052`.
-The same image contains all three executables; the build stage runs `ctest`.
-The runtime containers run as an unprivileged numeric user.
-
-```sh
-docker compose exec -T mgm client mgm:50051 get example
-docker compose exec -T mgm client mgm:50051 put example 42
-```
-
-Each command prints `RPC status 12: ... is not implemented yet` and exits 3.
-That is an intentional RPC response, **not** a successful object operation.
-CLI exit codes: 0 = OK, 1 = other RPC error, 2 = invalid usage, 3 = UNIMPLEMENTED.
-
-```sh
-make smoke  # Build, assert all registrations + CLI replies, then remove the stack
+make logs
 make down
 ```
 
-`make smoke` owns and tears down the Compose project, so do not run it against
-a dev stack you want to keep running. These are development-only insecure gRPC
-channels: **no TLS or authentication**. Only MGM is published to the host, bound
-to `127.0.0.1:50051`; FST ports remain on the Compose network.
+The FST runs as an unprivileged user, stores data at `/var/lib/objectstore`,
+and publishes `127.0.0.1:50052`. The named volume survives `make down`;
+`docker compose down --volumes` explicitly destroys it. Set `FST_PORT` to change
+the host port. These are insecure development channels: **no TLS or auth**.
 
 ### Without containers
 
-In separate terminals:
-
 ```sh
-./build/src/mgm/mgm 127.0.0.1:50051
-./build/src/fst/fst 127.0.0.1:50052 127.0.0.1:50051 fst-1 127.0.0.1:50052
-./build/src/client/client 127.0.0.1:50051 get example
+# Terminal 1
+./build/src/fst/fst 127.0.0.1:50052 ./data
+# Terminal 2
+./build/src/client/client put example.txt example
+./build/src/client/client get example output.txt
+./build/src/client/client rm example
 ```
 
-Stop servers with Ctrl-C. No disk paths, storage volumes, or files are used yet.
+`fst [listen_address] [data_dir]` defaults to `127.0.0.1:50052` and `./data`.
+`FST_ADDRESS` configures the client endpoint (default `127.0.0.1:50052`).
+CLI exit codes: 0 = success, 1 = RPC/local I/O error, 2 = invalid usage.
+Stop the server with Ctrl-C. Run only one FST process per data directory.
 
-## CI and lint
+Uploads reserve an ID until removed, even if interrupted; use `client rm` before
+retrying a failed upload. Downloads replace the output only after all chunks
+verify. A hard-killed client can leave `<out_file>.download`; remove that stale
+directory before retrying. Do not modify an input file during upload or delete
+and reuse an object ID during a download.
 
-[GitHub Actions](https://github.com/IV-cmd/distributed-object-store/actions/workflows/ci.yml)
-builds/tests with GCC and Clang on Ubuntu 24.04, checks Google-style formatting
-with clang-format 18, runs clang-tidy 18 on all handwritten `.cc` files, and
-runs the four-container RPC smoke check. Compose output is saved as an artifact.
-Generated protobuf sources are not formatted or analyzed.
+## Verification and lint
+
+```sh
+make smoke
+```
+
+This builds the image, starts one FST in an isolated Compose project, exercises
+multi-chunk and empty-file CLI round-trips, checks deletion, flips a stored byte,
+and requires `DATA_LOSS` / `CHECKSUM_MISMATCH`. It removes its own test volume.
+Actions saves its output as the `compose-smoke` artifact.
 
 ```sh
 sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
-# Formatting check (prints a diff and changes only the local working copy):
 git ls-files -z '*.cc' '*.h' | xargs -0 clang-format-18 -i
 git diff --exit-code
-# Static analysis uses a Clang compilation database:
 cmake -S . -B build-lint -G Ninja -DCMAKE_CXX_COMPILER=clang++-18
 cmake --build build-lint --target objectstore_proto --parallel 2
 git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build-lint
 ```
 
+## Layout
+
+```text
+proto/            RPC definitions and code generation
+src/common/       Shared 1 MiB chunking and xxHash64 checksums
+src/fst/          Disk storage, manifest lifecycle, gRPC service and server
+src/client/       File transfers and CLI
+src/mgm/          Separate metadata-server stub
+tests/            GoogleTest unit and gRPC integration tests
+docker/           Dockerfile and single-node Compose definition
+scripts/          Container smoke check
+docs/             Storage format and protocol documentation
+```
+
 ## Roadmap / not yet done
 
-- Object storage and metadata persistence
-- Three-way replication
-- Reed-Solomon (4+2) erasure coding
-- Per-chunk checksums
-- Node drain, failure detection, and re-replication
-- Background scrubber: corruption detection and repair
-- Fault injection: killed nodes, corrupted chunks, and network delays
-- Benchmarks: throughput, rebuild time, and degraded-read latency
+- MGM placement, persistent metadata, and node registry
+- Three-way replication and Reed-Solomon (4+2) erasure coding
+- Failure detection, node drain, and re-replication
+- Background scrubber and repair
+- Multi-node/network fault injection and benchmarks
+- Authentication, TLS, and crash-safe durable commits
 
-Later features will be specified individually. No durability, availability,
-performance, or EOS compatibility claims are made by the current skeleton.
-
+No availability, power-loss durability, throughput, or EOS compatibility claims.
 MIT licensed; see [LICENSE](LICENSE).
