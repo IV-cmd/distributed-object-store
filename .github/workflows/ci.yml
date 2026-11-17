@@ -58,13 +58,13 @@ jobs:
         run: git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build
 
   compose:
-    name: Compose RPC smoke
+    name: Single-node storage smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Start four containers and check RPCs
-        run: ./scripts/smoke.sh | tee compose-smoke.log
+      - name: Verify CLI storage and disk corruption
+        run: ./scripts/smoke.sh 2>&1 | tee compose-smoke.log
       - name: Save Compose evidence
         if: always()
         uses: actions/upload-artifact@v4

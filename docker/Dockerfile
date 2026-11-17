@@ -19,5 +19,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=build /work/build/src/mgm/mgm /usr/local/bin/mgm
 COPY --from=build /work/build/src/fst/fst /usr/local/bin/fst
 COPY --from=build /work/build/src/client/client /usr/local/bin/client
+RUN mkdir -p /var/lib/objectstore && chown 10001:10001 /var/lib/objectstore
 USER 10001:10001
-CMD ["mgm", "0.0.0.0:50051"]
+CMD ["fst", "0.0.0.0:50052", "/var/lib/objectstore"]
