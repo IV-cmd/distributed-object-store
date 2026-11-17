@@ -94,9 +94,10 @@ docker compose start fst1 fst5
 ```
 
 `make test` runs all C++ tests. `make erasure` uses disposable projects to test
-all 15 holder-loss pairs without spares, corrupt-fragment reconstruction,
+all 15 holder-loss pairs without spares using nonperiodic 5 MiB+7-byte input
+and six distinct expected hashes per stripe, corrupt-fragment reconstruction,
 data/parity repair onto fst7/fst8 while fst1/fst5 remain DOWN, and an isolated
-three-loss case with output preservation. [The Actions proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081711607)
+three-loss case with output preservation. [The Actions proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44084029111)
 retains raw JSON, per-phase timings, and container logs. `make bench` measures
 both layouts; [README](../README.md#measured-benchmarks) labels conditions and
 links the raw record. Expensive workflows remain manually selected in Actions.

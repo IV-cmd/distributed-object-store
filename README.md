@@ -25,7 +25,7 @@ flowchart LR
 ```
 
 MGM owns the file-to-chunk-to-node map; **file bytes do not pass through MGM**.
-The client writes each chunk sequentially to all three targets, records only
+For replica3, the client writes each chunk to all three targets, records only
 acknowledged replicas, and publishes the file only after every chunk has three
 copies and all FST manifests finish. A failed upload stays visibly incomplete.
 
@@ -176,7 +176,7 @@ of each chunk. The marker precedes Docker stop; DOWN and final completion use
 same-host MGM timestamps. Metadata must show three surviving holders. Settings:
 2000 ms heartbeat, 6000 ms timeout, 500 ms repair interval, one copy at a time.
 Rebuild duration includes deliberate pacing. RS reconstruction-based repair is
-verified in [the eight-FST proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081711607),
+verified in [the eight-FST proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44084029111),
 not presented as a measured RS rebuild-throughput benchmark.
 
 ## Build and test

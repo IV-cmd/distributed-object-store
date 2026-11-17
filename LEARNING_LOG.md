@@ -134,7 +134,7 @@ Owner reflection sections remain blank.
   markers, retained returning copies, and filesystem block allocation are different
   costs; the raw record separates the measured marker/checksum bytes.
 
-[RS proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081711607);
+[RS proof](https://github.com/IV-cmd/distributed-object-store/actions/runs/44084029111);
 [layout comparison](https://github.com/IV-cmd/distributed-object-store/actions/runs/44081355339);
 [current raw measurements](docs/benchmark-results.json).
 
@@ -143,3 +143,9 @@ Owner reflection sections remain blank.
   uses nonperiodic 5 MiB+7-byte data and requires six different expected hashes
   in each stripe; copying an unrelated surviving fragment cannot satisfy that
   proof. This is a test-data gap found in review, not a fabricated codec bug.
+
+- Strengthening the fixture exposed two harness mistakes, not codec failures:
+  Docker-copied inputs were root-owned and not writable by the normal container
+  user; a fresh /tmp path fixes that. wait_rs signals readiness but returns no
+  records, so the distinct-hash check now fetches chunks explicitly afterward.
+  A known zero prefix makes the corruption overwrite guaranteed, not probabilistic.
