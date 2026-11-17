@@ -1,0 +1,33 @@
+x-node: &node
+  image: distributed-object-store:dev
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+  init: true
+  networks: [objectstore]
+
+services:
+  mgm:
+    <<: *node
+    command: [mgm, "0.0.0.0:50051"]
+    ports:
+      - "127.0.0.1:50051:50051"
+
+  fst-1:
+    <<: *node
+    depends_on: [mgm]
+    command: [fst, "0.0.0.0:50052", "mgm:50051", fst-1, "fst-1:50052"]
+
+  fst-2:
+    <<: *node
+    depends_on: [mgm]
+    command: [fst, "0.0.0.0:50052", "mgm:50051", fst-2, "fst-2:50052"]
+
+  fst-3:
+    <<: *node
+    depends_on: [mgm]
+    command: [fst, "0.0.0.0:50052", "mgm:50051", fst-3, "fst-3:50052"]
+
+networks:
+  objectstore:
+    driver: bridge
