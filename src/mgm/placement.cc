@@ -21,7 +21,7 @@ std::vector<v1::NodeInfo> SelectNodes(std::vector<v1::NodeInfo> available,
     if (selected.size() == replication_factor) {
       break;
     }
-    if (node.node_id().empty() || node.endpoint().empty() ||
+    if (node.state() != v1::UP || node.node_id().empty() || node.endpoint().empty() ||
         ids.contains(node.node_id()) || endpoints.contains(node.endpoint())) {
       continue;
     }

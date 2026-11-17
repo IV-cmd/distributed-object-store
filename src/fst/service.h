@@ -27,6 +27,8 @@ class FstService final : public v1::FstService::Service {
   grpc::Status DeleteChunk(grpc::ServerContext*, const v1::DeleteChunkRequest*,
                            google::protobuf::Empty*) override;
 
+  void FillHeartbeat(v1::HeartbeatRequest& request);
+
  private:
   grpc::Status Run(const std::function<void()>& operation);
   std::filesystem::path ObjectDir(const std::string& object_id) const;

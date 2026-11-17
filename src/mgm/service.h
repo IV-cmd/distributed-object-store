@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -36,7 +37,17 @@ class MgmService final : public v1::MgmService::Service {
   grpc::Status DeleteFile(grpc::ServerContext*, const v1::ObjectRequest*,
                           google::protobuf::Empty*) override;
 
+  grpc::Status Heartbeat(grpc::ServerContext*, const v1::HeartbeatRequest*,
+                         v1::HeartbeatResponse*) override;
+  grpc::Status ListNodes(grpc::ServerContext*, const google::protobuf::Empty*,
+                         v1::NodeList*) override;
+
  private:
+  struct Node {
+    v1::NodeInfo info;
+    std::chrono::steady_clock::time_point last_heartbeat;
+  };
+
   struct File {
     v1::FileMetadata info;
     std::map<std::uint32_t, v1::ChunkMetadata> chunks;
@@ -45,7 +56,7 @@ class MgmService final : public v1::MgmService::Service {
   static v1::FileMetadata Snapshot(const File& file);
 
   std::mutex mutex_;
-  std::map<std::string, v1::NodeInfo> nodes_;
+  std::map<std::string, Node> nodes_;
   std::map<std::string, File> files_;
 };
 

@@ -6,6 +6,8 @@
 #include <iostream>
 #include <string>
 
+#include "common/settings.h"
+#include "fst/heartbeat.h"
 #include "fst/service.h"
 
 int main(int argc, char* argv[]) {
@@ -27,6 +29,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
     std::cout << "FST listening on " << address << '\n' << std::flush;
+    std::unique_ptr<objectstore::HeartbeatSender> heartbeats;
     if (argc == 6) {
       auto stub = objectstore::v1::MgmService::NewStub(
           grpc::CreateChannel(argv[3], grpc::InsecureChannelCredentials()));
@@ -48,6 +51,10 @@ int main(int argc, char* argv[]) {
       }
       std::cout << "RegisterNode succeeded: node_id=" << argv[4] << '\n'
                 << std::flush;
+      heartbeats = std::make_unique<objectstore::HeartbeatSender>(
+          service, request.node(),
+          grpc::CreateChannel(argv[3], grpc::InsecureChannelCredentials()),
+          objectstore::EnvMilliseconds("HEARTBEAT_INTERVAL_MS", 2000));
     }
     server->Wait();
   } catch (const std::exception& error) {

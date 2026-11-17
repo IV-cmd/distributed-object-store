@@ -109,5 +109,29 @@ TEST_F(MgmRpcTest, PutReservesMetadata) {
   EXPECT_TRUE(stub_->Put(&context, request, &response).ok());
 }
 
+TEST_F(MgmRpcTest, HeartbeatUpdatesNodeCountersAndRejectsUnknownNode) {
+  v1::HeartbeatRequest request;
+  request.set_node_id("fst-1");
+  request.set_endpoint("127.0.0.1:50052");
+  request.set_chunk_count(7);
+  request.set_free_bytes(4096);
+  v1::HeartbeatResponse response;
+  grpc::ClientContext missing;
+  EXPECT_EQ(stub_->Heartbeat(&missing, request, &response).error_code(),
+            grpc::StatusCode::NOT_FOUND);
+  v1::RegisterNodeResponse registered;
+  ASSERT_TRUE(Register(registered).ok());
+  grpc::ClientContext context;
+  EXPECT_TRUE(stub_->Heartbeat(&context, request, &response).ok());
+  google::protobuf::Empty empty;
+  v1::NodeList nodes;
+  grpc::ClientContext listing;
+  ASSERT_TRUE(stub_->ListNodes(&listing, empty, &nodes).ok());
+  ASSERT_EQ(nodes.nodes_size(), 1);
+  EXPECT_EQ(nodes.nodes(0).state(), v1::UP);
+  EXPECT_EQ(nodes.nodes(0).chunk_count(), 7);
+  EXPECT_EQ(nodes.nodes(0).free_bytes(), 4096);
+}
+
 }  // namespace
 }  // namespace objectstore

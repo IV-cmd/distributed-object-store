@@ -1,4 +1,4 @@
-add_library(mgm_service service.cc placement.cc)
+add_library(mgm_service service.cc health.cc placement.cc)
 target_include_directories(mgm_service PUBLIC "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(mgm_service PUBLIC objectstore_proto objectstore_common)
 

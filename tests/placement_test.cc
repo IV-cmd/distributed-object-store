@@ -13,6 +13,7 @@ namespace {
 v1::NodeInfo Node(const std::string& id) {
   v1::NodeInfo node;
   node.set_node_id(id);
+  node.set_state(v1::UP);
   node.set_endpoint(id + ":50052");
   return node;
 }

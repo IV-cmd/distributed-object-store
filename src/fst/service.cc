@@ -229,4 +229,21 @@ grpc::Status FstService::DeleteChunk(grpc::ServerContext*,
   });
 }
 
+void FstService::FillHeartbeat(v1::HeartbeatRequest& request) {
+  const std::lock_guard lock(mutex_);
+  std::uint64_t count = 0;
+  for (const auto& object : fs::directory_iterator(data_dir_)) {
+    if (!object.is_directory()) {
+      continue;
+    }
+    for (const auto& entry : fs::directory_iterator(object.path())) {
+      if (entry.is_regular_file() && entry.path().extension() == ".chunk") {
+        ++count;
+      }
+    }
+  }
+  request.set_chunk_count(count);
+  request.set_free_bytes(fs::space(data_dir_).available);
+}
+
 }  // namespace objectstore

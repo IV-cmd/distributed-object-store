@@ -33,31 +33,6 @@ v1::FileMetadata MgmService::Snapshot(const File& file) {
   return info;
 }
 
-grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
-                                      const v1::RegisterNodeRequest* request,
-                                      v1::RegisterNodeResponse* response) {
-  const auto& node = request->node();
-  if (!ValidId(node.node_id()) || node.endpoint().empty()) {
-    return {StatusCode::INVALID_ARGUMENT,
-            "valid node ID and endpoint required"};
-  }
-  const std::lock_guard lock(mutex_);
-  for (const auto& [id, existing] : nodes_) {
-    if ((id == node.node_id()) != (existing.endpoint() == node.endpoint())) {
-      return {StatusCode::ALREADY_EXISTS,
-              "node IDs and endpoints must be unique and stable"};
-    }
-  }
-  nodes_[node.node_id()] = node;
-  response->set_accepted(true);
-  std::osyncstream(std::cout)
-      << "RegisterNode accepted: node_id=" << node.node_id()
-      << " endpoint=" << node.endpoint()
-      << " capacity=" << node.capacity_bytes() << '\n'
-      << std::flush;
-  return grpc::Status::OK;
-}
-
 grpc::Status MgmService::Put(grpc::ServerContext*,
                              const v1::PutRequest* request, v1::PutResponse*) {
   const auto count = ChunkCount(request->size_bytes());
@@ -98,7 +73,7 @@ grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
     std::vector<v1::NodeInfo> available;
     available.reserve(nodes_.size());
     for (const auto& [id, node] : nodes_) {
-      available.push_back(node);
+      available.push_back(node.info);
     }
     const auto selected = SelectNodes(std::move(available), kReplicationFactor);
     if (selected.size() != kReplicationFactor) {

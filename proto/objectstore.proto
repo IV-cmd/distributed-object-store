@@ -15,7 +15,8 @@ service MgmService {
   rpc Put(PutRequest) returns (PutResponse);
   rpc Get(GetRequest) returns (GetResponse);
   rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
-  rpc Heartbeat(HeartbeatRequest) returns (google.protobuf.Empty);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc ListNodes(google.protobuf.Empty) returns (NodeList);
   rpc ReportChunkStatus(ReportChunkStatusRequest) returns (google.protobuf.Empty);
 }
 
@@ -35,10 +36,21 @@ message ChunkId {
   uint32 index = 2;
 }
 
+enum NodeState {
+  NODE_STATE_UNSPECIFIED = 0;
+  UP = 1;
+  DOWN = 2;
+  REJOINING = 3;
+}
+
 message NodeInfo {
   string node_id = 1;
   string endpoint = 2;
   uint64 capacity_bytes = 3;
+  NodeState state = 4;
+  uint64 chunk_count = 5;
+  uint64 free_bytes = 6;
+  uint64 incarnation = 7;
 }
 
 message ChunkLocation {
@@ -89,6 +101,17 @@ message RegisterNodeResponse {
 
 message HeartbeatRequest {
   string node_id = 1;
+  string endpoint = 2;
+  uint64 chunk_count = 3;
+  uint64 free_bytes = 4;
+}
+
+message HeartbeatResponse {
+  bool report_inventory = 1;
+}
+
+message NodeList {
+  repeated NodeInfo nodes = 1;
 }
 
 message ReportChunkStatusRequest {
