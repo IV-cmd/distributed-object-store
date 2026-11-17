@@ -171,6 +171,8 @@ message ChunkMetadata {
   repeated NodeInfo replicas = 2;
   fixed64 checksum = 3;
   bool committed = 4;
+  repeated NodeInfo known_replicas = 5;
+  repeated string invalid_replicas = 6;
 }
 
 message FileMetadata {
@@ -181,6 +183,7 @@ message FileMetadata {
   bool complete = 5;
   repeated ChunkMetadata chunks = 6;
   repeated NodeInfo targets = 7;
+  uint64 generation = 8;
 }
 
 message FileList {

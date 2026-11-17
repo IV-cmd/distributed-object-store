@@ -25,10 +25,29 @@ bool ValidId(const std::string& id) {
 
 }  // namespace
 
-v1::FileMetadata MgmService::Snapshot(const File& file) {
+v1::ChunkMetadata MgmService::LiveChunk(const v1::ChunkMetadata& chunk) const {
+  auto result = chunk;
+  result.clear_replicas();
+  result.clear_known_replicas();
+  const std::set<std::string> invalid(chunk.invalid_replicas().begin(),
+                                       chunk.invalid_replicas().end());
+  for (const auto& holder : chunk.replicas()) {
+    const auto node = nodes_.find(holder.node_id());
+    if (node == nodes_.end()) {
+      continue;
+    }
+    *result.add_known_replicas() = node->second.info;
+    if (node->second.info.state() == v1::UP && !invalid.contains(holder.node_id())) {
+      *result.add_replicas() = node->second.info;
+    }
+  }
+  return result;
+}
+
+v1::FileMetadata MgmService::Snapshot(const File& file) const {
   auto info = file.info;
   for (const auto& [index, chunk] : file.chunks) {
-    *info.add_chunks() = chunk;
+    *info.add_chunks() = LiveChunk(chunk);
   }
   return info;
 }
@@ -47,6 +66,7 @@ grpc::Status MgmService::Put(grpc::ServerContext*,
   }
   auto& info = it->second.info;
   info.set_object_id(request->object_id());
+  info.set_generation(++next_generation_);
   info.set_name(request->name().empty() ? request->object_id()
                                         : request->name());
   info.set_size_bytes(request->size_bytes());
@@ -104,7 +124,8 @@ grpc::Status MgmService::Get(grpc::ServerContext*,
     return {StatusCode::FAILED_PRECONDITION, "file upload is incomplete"};
   }
   for (const auto& [index, chunk] : file->second.chunks) {
-    for (const auto& node : chunk.replicas()) {
+    const auto live = LiveChunk(chunk);
+    for (const auto& node : live.replicas()) {
       auto* location = response->mutable_plan()->add_chunks();
       *location->mutable_chunk() = chunk.chunk();
       *location->mutable_node() = node;
@@ -165,7 +186,7 @@ grpc::Status MgmService::LocateChunk(grpc::ServerContext*,
   if (chunk == file->second.chunks.end() || !chunk->second.committed()) {
     return {StatusCode::FAILED_PRECONDITION, "chunk is not committed"};
   }
-  *response = chunk->second;
+  *response = LiveChunk(chunk->second);
   return grpc::Status::OK;
 }
 
@@ -202,9 +223,9 @@ grpc::Status MgmService::CompleteFile(grpc::ServerContext*,
   auto& record = file->second;
   if (record.chunks.size() != record.info.chunk_count() ||
       std::any_of(record.chunks.begin(), record.chunks.end(),
-                  [](const auto& item) {
+                  [this](const auto& item) {
                     return !item.second.committed() ||
-                           item.second.replicas_size() != kReplicationFactor;
+                           LiveChunk(item.second).replicas_size() != kReplicationFactor;
                   })) {
     return {StatusCode::FAILED_PRECONDITION, "file is not fully replicated"};
   }

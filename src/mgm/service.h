@@ -8,6 +8,7 @@
 #include <string>
 
 #include "objectstore.grpc.pb.h"
+#include "mgm/recovery.h"
 
 namespace objectstore {
 
@@ -15,6 +16,10 @@ inline constexpr std::size_t kReplicationFactor = 3;
 
 class MgmService final : public v1::MgmService::Service {
  public:
+  explicit MgmService(std::chrono::milliseconds timeout =
+                          std::chrono::milliseconds(6000)) : timeout_(timeout) {}
+  void Maintain(HealthClock::time_point now = HealthClock::now());
+
   grpc::Status RegisterNode(grpc::ServerContext*,
                             const v1::RegisterNodeRequest*,
                             v1::RegisterNodeResponse*) override;
@@ -53,7 +58,12 @@ class MgmService final : public v1::MgmService::Service {
     std::map<std::uint32_t, v1::ChunkMetadata> chunks;
   };
 
-  static v1::FileMetadata Snapshot(const File& file);
+  v1::FileMetadata Snapshot(const File& file) const;
+  v1::ChunkMetadata LiveChunk(const v1::ChunkMetadata& chunk) const;
+
+  std::chrono::milliseconds timeout_;
+  std::uint64_t next_generation_ = 0;
+  std::mutex maintenance_mutex_;
 
   std::mutex mutex_;
   std::map<std::string, Node> nodes_;

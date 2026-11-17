@@ -21,18 +21,21 @@ grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
               "node IDs and endpoints must be unique and stable"};
     }
   }
-  auto& record = nodes_[node.node_id()];
+  const auto [entry, inserted] = nodes_.try_emplace(node.node_id());
+  auto& record = entry->second;
+  const auto incarnation = record.info.incarnation() + 1;
   record.info = node;
-  record.info.set_state(v1::UP);
+  record.info.set_incarnation(incarnation);
+  record.info.set_state(inserted ? v1::UP : v1::REJOINING);
   record.last_heartbeat = std::chrono::steady_clock::now();
   response->set_accepted(true);
-  Log("node_registered", "node=" + node.node_id() + " endpoint=" + node.endpoint());
+  Log(inserted ? "node_registered" : "node_rejoining", "node=" + node.node_id() + " endpoint=" + node.endpoint());
   return grpc::Status::OK;
 }
 
 grpc::Status MgmService::Heartbeat(grpc::ServerContext*,
                                    const v1::HeartbeatRequest* request,
-                                   v1::HeartbeatResponse*) {
+                                   v1::HeartbeatResponse* response) {
   const std::lock_guard lock(mutex_);
   const auto node = nodes_.find(request->node_id());
   if (node == nodes_.end()) {
@@ -42,6 +45,12 @@ grpc::Status MgmService::Heartbeat(grpc::ServerContext*,
   if (request->endpoint() != record.info.endpoint()) {
     return {grpc::StatusCode::INVALID_ARGUMENT, "heartbeat endpoint changed"};
   }
+  if (record.info.state() == v1::DOWN) {
+    record.info.set_state(v1::REJOINING);
+    record.info.set_incarnation(record.info.incarnation() + 1);
+    Log("node_rejoining", "node=" + request->node_id());
+  }
+  response->set_report_inventory(record.info.state() == v1::REJOINING);
   record.last_heartbeat = std::chrono::steady_clock::now();
   record.info.set_chunk_count(request->chunk_count());
   record.info.set_free_bytes(request->free_bytes());

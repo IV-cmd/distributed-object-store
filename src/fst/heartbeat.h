@@ -1,5 +1,7 @@
 #pragma once
 
+#include <grpcpp/grpcpp.h>
+
 #include <chrono>
 #include <condition_variable>
 #include <memory>
