@@ -64,7 +64,7 @@ ctest --test-dir build --output-on-failure
 
 Select Clang with `-DCMAKE_CXX_COMPILER=clang++-18` in a fresh build directory.
 Use `-DBUILD_TESTING=OFF` for binaries only. Tests bind ephemeral loopback ports
-and use temporary data, including three real FST servers and an MGM.
+and use temporary data, including four-node recovery clusters and an MGM.
 
 ## Run the replicated store
 
@@ -163,7 +163,7 @@ git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build-lint
 
 Not yet implemented: metadata persistence/high availability, load balancing,
 capacity-aware placement, a manual node-drain command,
-Reed-Solomon (4+2) erasure coding, scrubbing, repair, benchmarks, TLS/authentication,
+Reed-Solomon (4+2) erasure coding, scrubbing, in-place corruption repair, benchmarks, TLS/authentication,
 or power-loss durability. Parallel replica writes remain a roadmap item.
 
 MIT licensed; see [LICENSE](LICENSE).

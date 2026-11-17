@@ -53,3 +53,7 @@ Owner reflection sections above remain blank.
   corrupt holder can leave only two verified copies with four registered nodes.
 - Format differences were found by Actions; its exact formatter diff was applied.
   Owner reflection sections remain blank.
+- Final review found that missing source chunks returned NOT_FOUND, whereas only
+  DATA_LOSS sources were quarantined. That could overcount healthy RF after fallback.
+  Both confirmed local failures now quarantine that copy; a regression test verifies
+  that only the surviving source and verified replacement are counted.

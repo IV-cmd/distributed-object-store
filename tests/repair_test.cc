@@ -234,6 +234,19 @@ TEST_F(RepairTest, CorruptSourceIsNotPropagatedAndAnotherSourceIsTried) {
   EXPECT_EQ(Read(root_ / "output"), bytes_);
 }
 
+TEST_F(RepairTest, MissingSourceIsNotCountedAsHealthyAfterFallback) {
+  Put();
+  LoseSecondNode();
+  fs::remove(Dir(0) / "sample" / "0.chunk");
+  mgm_.Maintain();
+  const auto info = Stat();
+  ASSERT_EQ(info.chunks_size(), 1);
+  EXPECT_EQ(info.chunks(0).replicas_size(), 2);
+  ASSERT_EQ(info.chunks(0).invalid_replicas_size(), 1);
+  EXPECT_EQ(info.chunks(0).invalid_replicas(0), "fst1");
+  EXPECT_EQ(Read(Dir(3) / "sample" / "0.chunk"), bytes_);
+}
+
 TEST_F(RepairTest, RejectsBadInstallChecksumWithoutCreatingReplica) {
   v1::InstallChunkRequest request;
   request.set_size_bytes(3);

@@ -47,7 +47,7 @@ Regular uploads remain unreadable until finished. Repair rejects pending upload
 directories and will not overwrite an existing complete data/sidecar pair.
 Identical installs are idempotent; corrupted existing pairs require intervention.
 
-A source returning verified corruption is quarantined for that chunk and another
+A source reporting missing data or verified corruption is quarantined for that chunk and another
 source is tried. It is no longer counted as a healthy replica. With one dead
 node plus a corrupt holder, a four-node cluster may restore only two verified
 copies: it must not invent a third or overwrite quarantined data automatically.

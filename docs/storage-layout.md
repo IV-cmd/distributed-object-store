@@ -53,7 +53,7 @@ The `.crc` suffix is a sidecar naming convention, **not a claim to use CRC32C**.
 Checksum collisions are possible. An attacker can replace both data and its
 checksum. This detects accidental corruption; it does not authenticate data,
 replace TLS, or recover bytes. Replicated reads can use another verified copy;
-there is still no automatic repair.
+automatic node-failure repair is described in [recovery](recovery.md).
 
 ## Upload and read lifecycle
 
