@@ -1,5 +1,3 @@
-#include "mgm/service.h"
-
 #include <gtest/gtest.h>
 
 #include <cstdint>
@@ -7,6 +5,7 @@
 #include <vector>
 
 #include "common/chunk.h"
+#include "mgm/service.h"
 
 namespace objectstore {
 namespace {
@@ -40,7 +39,7 @@ class MetadataTest : public testing::Test {
   }
 
   grpc::Status Commit(const std::vector<std::string>& nodes,
-                       std::uint32_t index = 0) {
+                      std::uint32_t index = 0) {
     v1::CommitChunkRequest request;
     request.mutable_chunk()->set_object_id("file");
     request.mutable_chunk()->set_index(index);

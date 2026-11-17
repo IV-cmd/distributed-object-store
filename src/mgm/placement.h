@@ -8,6 +8,6 @@
 namespace objectstore {
 
 std::vector<v1::NodeInfo> SelectNodes(std::vector<v1::NodeInfo> available,
-                                     std::size_t replication_factor);
+                                      std::size_t replication_factor);
 
 }  // namespace objectstore

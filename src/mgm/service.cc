@@ -19,8 +19,8 @@ using grpc::StatusCode;
 bool ValidId(const std::string& id) {
   return !id.empty() && id.size() <= 128 &&
          id.find_first_not_of(
-             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") ==
-             std::string::npos;
+             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+             "-") == std::string::npos;
 }
 
 }  // namespace
@@ -38,7 +38,8 @@ grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
                                       v1::RegisterNodeResponse* response) {
   const auto& node = request->node();
   if (!ValidId(node.node_id()) || node.endpoint().empty()) {
-    return {StatusCode::INVALID_ARGUMENT, "valid node ID and endpoint required"};
+    return {StatusCode::INVALID_ARGUMENT,
+            "valid node ID and endpoint required"};
   }
   const std::lock_guard lock(mutex_);
   for (const auto& [id, existing] : nodes_) {
@@ -51,13 +52,14 @@ grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
   response->set_accepted(true);
   std::osyncstream(std::cout)
       << "RegisterNode accepted: node_id=" << node.node_id()
-      << " endpoint=" << node.endpoint() << " capacity=" << node.capacity_bytes()
-      << '\n' << std::flush;
+      << " endpoint=" << node.endpoint()
+      << " capacity=" << node.capacity_bytes() << '\n'
+      << std::flush;
   return grpc::Status::OK;
 }
 
-grpc::Status MgmService::Put(grpc::ServerContext*, const v1::PutRequest* request,
-                             v1::PutResponse*) {
+grpc::Status MgmService::Put(grpc::ServerContext*,
+                             const v1::PutRequest* request, v1::PutResponse*) {
   const auto count = ChunkCount(request->size_bytes());
   if (!ValidId(request->object_id()) ||
       count > std::numeric_limits<std::uint32_t>::max()) {
@@ -70,7 +72,8 @@ grpc::Status MgmService::Put(grpc::ServerContext*, const v1::PutRequest* request
   }
   auto& info = it->second.info;
   info.set_object_id(request->object_id());
-  info.set_name(request->name().empty() ? request->object_id() : request->name());
+  info.set_name(request->name().empty() ? request->object_id()
+                                        : request->name());
   info.set_size_bytes(request->size_bytes());
   info.set_chunk_count(static_cast<std::uint32_t>(count));
   return grpc::Status::OK;
@@ -98,7 +101,8 @@ grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
     }
     const auto selected = SelectNodes(std::move(available), kReplicationFactor);
     if (selected.size() != kReplicationFactor) {
-      return {StatusCode::RESOURCE_EXHAUSTED, "three distinct registered FSTs required"};
+      return {StatusCode::RESOURCE_EXHAUSTED,
+              "three distinct registered FSTs required"};
     }
     for (const auto& node : selected) {
       *record.info.add_targets() = node;
@@ -112,7 +116,8 @@ grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
   return grpc::Status::OK;
 }
 
-grpc::Status MgmService::Get(grpc::ServerContext*, const v1::GetRequest* request,
+grpc::Status MgmService::Get(grpc::ServerContext*,
+                             const v1::GetRequest* request,
                              v1::GetResponse* response) {
   const std::lock_guard lock(mutex_);
   const auto file = files_.find(request->object_id());
@@ -151,7 +156,8 @@ grpc::Status MgmService::CommitChunk(grpc::ServerContext*,
     if (!ids.insert(id).second ||
         std::none_of(targets.begin(), targets.end(),
                      [&](const auto& node) { return node.node_id() == id; })) {
-      return {StatusCode::INVALID_ARGUMENT, "replicas must be distinct targets"};
+      return {StatusCode::INVALID_ARGUMENT,
+              "replicas must be distinct targets"};
     }
   }
   auto& metadata = chunk->second;
@@ -219,10 +225,11 @@ grpc::Status MgmService::CompleteFile(grpc::ServerContext*,
   }
   auto& record = file->second;
   if (record.chunks.size() != record.info.chunk_count() ||
-      std::any_of(record.chunks.begin(), record.chunks.end(), [](const auto& item) {
-        return !item.second.committed() ||
-               item.second.replicas_size() != kReplicationFactor;
-      })) {
+      std::any_of(record.chunks.begin(), record.chunks.end(),
+                  [](const auto& item) {
+                    return !item.second.committed() ||
+                           item.second.replicas_size() != kReplicationFactor;
+                  })) {
     return {StatusCode::FAILED_PRECONDITION, "file is not fully replicated"};
   }
   record.info.set_complete(true);

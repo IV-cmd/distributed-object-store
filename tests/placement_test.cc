@@ -18,7 +18,8 @@ v1::NodeInfo Node(const std::string& id) {
 }
 
 TEST(PlacementTest, ReturnsThreeDistinctNodesDeterministically) {
-  std::vector<v1::NodeInfo> available{Node("c"), Node("a"), Node("d"), Node("b")};
+  std::vector<v1::NodeInfo> available{Node("c"), Node("a"), Node("d"),
+                                      Node("b")};
   const auto selected = SelectNodes(available, 3);
   ASSERT_EQ(selected.size(), 3);
   EXPECT_EQ(selected[0].node_id(), "a");
@@ -40,7 +41,8 @@ TEST(PlacementTest, ReturnsOnlyAvailableNodesWhenTooFewExist) {
 TEST(PlacementTest, NeverCountsDuplicateIdsOrEndpointsAsReplicas) {
   auto alias = Node("alias");
   alias.set_endpoint("a:50052");
-  const auto selected = SelectNodes({Node("a"), Node("a"), alias, Node("b")}, 3);
+  const auto selected =
+      SelectNodes({Node("a"), Node("a"), alias, Node("b")}, 3);
   EXPECT_EQ(selected.size(), 2);
   std::set<std::string> ids;
   std::set<std::string> endpoints;

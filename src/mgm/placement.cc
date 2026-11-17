@@ -8,11 +8,12 @@
 namespace objectstore {
 
 std::vector<v1::NodeInfo> SelectNodes(std::vector<v1::NodeInfo> available,
-                                     std::size_t replication_factor) {
-  std::sort(available.begin(), available.end(), [](const auto& a, const auto& b) {
-    return std::tie(a.node_id(), a.endpoint()) <
-           std::tie(b.node_id(), b.endpoint());
-  });
+                                      std::size_t replication_factor) {
+  std::sort(available.begin(), available.end(),
+            [](const auto& a, const auto& b) {
+              return std::tie(a.node_id(), a.endpoint()) <
+                     std::tie(b.node_id(), b.endpoint());
+            });
   std::vector<v1::NodeInfo> selected;
   std::set<std::string> ids;
   std::set<std::string> endpoints;

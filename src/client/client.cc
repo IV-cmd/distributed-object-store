@@ -21,7 +21,6 @@ void SetDeadline(grpc::ClientContext& context) {
                        std::chrono::seconds(30));
 }
 
-
 }  // namespace
 
 ObjectClient::ObjectClient(const std::shared_ptr<grpc::Channel>& channel)

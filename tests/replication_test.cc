@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include <grpcpp/grpcpp.h>
+#include <gtest/gtest.h>
 
 #include <array>
 #include <atomic>
@@ -30,31 +30,31 @@ class FaultyFst final : public v1::FstService::Service {
   std::atomic<bool> lie_on_read{false};
 
   grpc::Status BeginObject(grpc::ServerContext* context,
-                            const v1::BeginObjectRequest* request,
-                            google::protobuf::Empty* response) override {
+                           const v1::BeginObjectRequest* request,
+                           google::protobuf::Empty* response) override {
     return store_.BeginObject(context, request, response);
   }
   grpc::Status FinishObject(grpc::ServerContext* context,
-                             const v1::ObjectRequest* request,
-                             google::protobuf::Empty* response) override {
+                            const v1::ObjectRequest* request,
+                            google::protobuf::Empty* response) override {
     return store_.FinishObject(context, request, response);
   }
   grpc::Status DeleteObject(grpc::ServerContext* context,
-                             const v1::ObjectRequest* request,
-                             google::protobuf::Empty* response) override {
+                            const v1::ObjectRequest* request,
+                            google::protobuf::Empty* response) override {
     return store_.DeleteObject(context, request, response);
   }
   grpc::Status WriteChunk(grpc::ServerContext* context,
-                           const v1::WriteChunkRequest* request,
-                           google::protobuf::Empty* response) override {
+                          const v1::WriteChunkRequest* request,
+                          google::protobuf::Empty* response) override {
     if (reject_second_chunk.load() && request->chunk().index() == 1) {
       return {StatusCode::INTERNAL, "injected second chunk write failure"};
     }
     return store_.WriteChunk(context, request, response);
   }
   grpc::Status ReadChunk(grpc::ServerContext* context,
-                          const v1::ReadChunkRequest* request,
-                          v1::ReadChunkResponse* response) override {
+                         const v1::ReadChunkRequest* request,
+                         v1::ReadChunkResponse* response) override {
     const auto status = store_.ReadChunk(context, request, response);
     if (status.ok() && lie_on_read.load() && !response->data().empty()) {
       response->mutable_data()->front() ^= 1;
@@ -73,9 +73,8 @@ class ReplicationTest : public testing::Test {
     static std::atomic<unsigned> sequence{0};
     root_ = fs::temp_directory_path() /
             ("objectstore-replication-" +
-             std::to_string(std::chrono::steady_clock::now()
-                                .time_since_epoch()
-                                .count()) +
+             std::to_string(
+                 std::chrono::steady_clock::now().time_since_epoch().count()) +
              "-" + std::to_string(sequence.fetch_add(1)));
     fs::create_directories(root_);
     int mgm_port = 0;
@@ -85,9 +84,9 @@ class ReplicationTest : public testing::Test {
     builder.RegisterService(&mgm_);
     mgm_server_ = builder.BuildAndStart();
     ASSERT_NE(mgm_server_, nullptr);
-    const auto channel = grpc::CreateChannel(
-        "127.0.0.1:" + std::to_string(mgm_port),
-        grpc::InsecureChannelCredentials());
+    const auto channel =
+        grpc::CreateChannel("127.0.0.1:" + std::to_string(mgm_port),
+                            grpc::InsecureChannelCredentials());
     client_ = std::make_unique<ReplicatedClient>(channel);
     auto registry = v1::MgmService::NewStub(channel);
     for (std::size_t index = 0; index < stores_.size(); ++index) {
@@ -95,7 +94,8 @@ class ReplicationTest : public testing::Test {
       services_[index] = std::make_unique<FaultyFst>(*stores_[index]);
       int port = 0;
       grpc::ServerBuilder fst;
-      fst.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(), &port);
+      fst.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(),
+                           &port);
       fst.RegisterService(services_[index].get());
       servers_[index] = fst.BuildAndStart();
       ASSERT_NE(servers_[index], nullptr);
@@ -154,7 +154,8 @@ class ReplicationTest : public testing::Test {
 
   static std::string Read(const fs::path& path) {
     std::ifstream file(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    return {std::istreambuf_iterator<char>(file),
+            std::istreambuf_iterator<char>()};
   }
 
   void Put(const std::string& bytes, const std::string& id = "sample") {
@@ -172,8 +173,8 @@ class ReplicationTest : public testing::Test {
 };
 
 TEST_F(ReplicationTest, BoundarySizesRoundTripAndRecordThreeReplicasPerChunk) {
-  for (const auto size : {std::size_t{0}, std::size_t{17}, kChunkSize,
-                          2 * kChunkSize + 7}) {
+  for (const auto size :
+       {std::size_t{0}, std::size_t{17}, kChunkSize, 2 * kChunkSize + 7}) {
     const auto id = "file-" + std::to_string(size);
     const auto bytes = Bytes(size);
     Put(bytes, id);
@@ -216,8 +217,8 @@ TEST_P(OneFailedFstTest, ReadsAfterAnyOneServerStops) {
 }
 
 INSTANTIATE_TEST_SUITE_P(EveryReplica, OneFailedFstTest,
-                        testing::Values(std::size_t{0}, std::size_t{1},
-                                        std::size_t{2}));
+                         testing::Values(std::size_t{0}, std::size_t{1},
+                                         std::size_t{2}));
 
 TEST_F(ReplicationTest, FallsBackWhenStoredChunkFailsFstVerification) {
   const auto bytes = Bytes(2 * kChunkSize + 7);
@@ -247,7 +248,8 @@ TEST_F(ReplicationTest, AllCorruptReplicasFailWithoutReplacingExistingOutput) {
   Write(root_ / "output", "preserve this");
   const auto status = client_->Get("sample", root_ / "output");
   EXPECT_EQ(status.error_code(), StatusCode::DATA_LOSS);
-  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"), std::string::npos);
+  EXPECT_NE(status.error_message().find("CHECKSUM_MISMATCH"),
+            std::string::npos);
   EXPECT_EQ(Read(root_ / "output"), "preserve this");
   EXPECT_FALSE(fs::exists(root_ / "output.download"));
 }

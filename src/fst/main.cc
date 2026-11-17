@@ -10,7 +10,8 @@
 
 int main(int argc, char* argv[]) {
   if (argc > 6 || argc == 4 || argc == 5) {
-    std::cerr << "Usage: fst [listen_address] [data_dir] [mgm_address node_id endpoint]\n";
+    std::cerr << "Usage: fst [listen_address] [data_dir] [mgm_address node_id "
+                 "endpoint]\n";
     return 2;
   }
   try {

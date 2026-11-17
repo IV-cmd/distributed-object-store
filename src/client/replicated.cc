@@ -1,5 +1,3 @@
-#include "client/client.h"
-
 #include <grpcpp/grpcpp.h>
 
 #include <algorithm>
@@ -10,6 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "client/client.h"
 #include "client/download.h"
 #include "common/chunk.h"
 
@@ -28,7 +27,7 @@ struct Replica {
 };
 
 std::vector<Replica> StartReplicas(const v1::ReplicaPlan& plan,
-                                  const v1::BeginObjectRequest& begin) {
+                                   const v1::BeginObjectRequest& begin) {
   if (plan.nodes_size() != 3) {
     throw std::runtime_error("MGM did not allocate three replicas");
   }
@@ -40,8 +39,8 @@ std::vector<Replica> StartReplicas(const v1::ReplicaPlan& plan,
         !endpoints.insert(node.endpoint()).second) {
       throw std::runtime_error("MGM returned duplicate replica targets");
     }
-    auto stub = v1::FstService::NewStub(
-        grpc::CreateChannel(node.endpoint(), grpc::InsecureChannelCredentials()));
+    auto stub = v1::FstService::NewStub(grpc::CreateChannel(
+        node.endpoint(), grpc::InsecureChannelCredentials()));
     google::protobuf::Empty response;
     grpc::ClientContext context;
     Deadline(context);
@@ -52,8 +51,8 @@ std::vector<Replica> StartReplicas(const v1::ReplicaPlan& plan,
 }
 
 grpc::Status ReplicateChunk(v1::MgmService::Stub& mgm,
-                             const v1::WriteChunkRequest& request,
-                             std::vector<Replica>& replicas) {
+                            const v1::WriteChunkRequest& request,
+                            std::vector<Replica>& replicas) {
   v1::CommitChunkRequest commit;
   *commit.mutable_chunk() = request.chunk();
   commit.set_checksum(request.checksum());
@@ -80,22 +79,24 @@ grpc::Status ReplicateChunk(v1::MgmService::Stub& mgm,
                 status.error_message()};
   }
   if (!failure.ok()) {
-    return {failure.error_code(),
-            "partial write: chunk=" + std::to_string(request.chunk().index()) +
-                " committed_replicas=" + std::to_string(commit.node_ids_size()) +
-                "/3; " + failure.error_message()};
+    return {
+        failure.error_code(),
+        "partial write: chunk=" + std::to_string(request.chunk().index()) +
+            " committed_replicas=" + std::to_string(commit.node_ids_size()) +
+            "/3; " + failure.error_message()};
   }
   return grpc::Status::OK;
 }
 
 grpc::Status FinishReplicas(const v1::ObjectRequest& request,
-                             std::vector<Replica>& replicas) {
+                            std::vector<Replica>& replicas) {
   grpc::Status failure;
   for (auto& replica : replicas) {
     google::protobuf::Empty response;
     grpc::ClientContext context;
     Deadline(context);
-    const auto status = replica.stub->FinishObject(&context, request, &response);
+    const auto status =
+        replica.stub->FinishObject(&context, request, &response);
     if (!status.ok()) {
       failure = {status.error_code(),
                  "FST finish failed; MGM file remains incomplete: " +
@@ -106,8 +107,8 @@ grpc::Status FinishReplicas(const v1::ObjectRequest& request,
 }
 
 grpc::Status ReadReplicas(const v1::ChunkMetadata& chunk,
-                           std::uint64_t expected_size,
-                           v1::ReadChunkResponse& response) {
+                          std::uint64_t expected_size,
+                          v1::ReadChunkResponse& response) {
   if (!chunk.committed() || chunk.replicas().empty()) {
     return {grpc::StatusCode::FAILED_PRECONDITION, "no committed replicas"};
   }
@@ -117,17 +118,16 @@ grpc::Status ReadReplicas(const v1::ChunkMetadata& chunk,
   for (std::size_t offset = 0; offset < count; ++offset) {
     const auto index = (chunk.chunk().index() + offset) % count;
     const auto& node = chunk.replicas(static_cast<int>(index));
-    auto stub = v1::FstService::NewStub(
-        grpc::CreateChannel(node.endpoint(), grpc::InsecureChannelCredentials()));
+    auto stub = v1::FstService::NewStub(grpc::CreateChannel(
+        node.endpoint(), grpc::InsecureChannelCredentials()));
     v1::ReadChunkRequest request;
     *request.mutable_chunk() = chunk.chunk();
     grpc::ClientContext context;
     Deadline(context);
     auto status = stub->ReadChunk(&context, request, &response);
-    if (status.ok() &&
-        (response.data().size() != expected_size ||
-         response.checksum() != chunk.checksum() ||
-         !VerifyChecksum(response.data(), chunk.checksum()))) {
+    if (status.ok() && (response.data().size() != expected_size ||
+                        response.checksum() != chunk.checksum() ||
+                        !VerifyChecksum(response.data(), chunk.checksum()))) {
       status = {grpc::StatusCode::DATA_LOSS,
                 "CHECKSUM_MISMATCH: response disagrees with MGM metadata"};
     }
@@ -149,11 +149,12 @@ grpc::Status ReadReplicas(const v1::ChunkMetadata& chunk,
 
 }  // namespace
 
-ReplicatedClient::ReplicatedClient(const std::shared_ptr<grpc::Channel>& channel)
+ReplicatedClient::ReplicatedClient(
+    const std::shared_ptr<grpc::Channel>& channel)
     : stub_(v1::MgmService::NewStub(channel)) {}
 
 grpc::Status ReplicatedClient::Put(const std::filesystem::path& file,
-                                    const std::string& object_id) {
+                                   const std::string& object_id) {
   std::ifstream input(file, std::ios::binary);
   if (!input) {
     throw std::runtime_error("cannot open input file");
@@ -176,7 +177,8 @@ grpc::Status ReplicatedClient::Put(const std::filesystem::path& file,
   std::uint32_t index = 0;
   while (ReadNextChunk(input, bytes)) {
     if (bytes.size() > size - sent) {
-      throw std::runtime_error("input grew during upload; remove partial object");
+      throw std::runtime_error(
+          "input grew during upload; remove partial object");
     }
     v1::ChunkId chunk;
     chunk.set_object_id(object_id);
@@ -205,7 +207,8 @@ grpc::Status ReplicatedClient::Put(const std::filesystem::path& file,
     sent += bytes.size();
   }
   if (sent != size) {
-    throw std::runtime_error("input shrank during upload; remove partial object");
+    throw std::runtime_error(
+        "input shrank during upload; remove partial object");
   }
   v1::ObjectRequest finish;
   finish.set_object_id(object_id);
@@ -220,7 +223,7 @@ grpc::Status ReplicatedClient::Put(const std::filesystem::path& file,
 }
 
 grpc::Status ReplicatedClient::Stat(const std::string& object_id,
-                                     v1::FileMetadata& metadata) {
+                                    v1::FileMetadata& metadata) {
   v1::ObjectRequest request;
   request.set_object_id(object_id);
   grpc::ClientContext context;
@@ -236,7 +239,7 @@ grpc::Status ReplicatedClient::List(v1::FileList& files) {
 }
 
 grpc::Status ReplicatedClient::Get(const std::string& object_id,
-                                    const std::filesystem::path& file) {
+                                   const std::filesystem::path& file) {
   v1::FileMetadata info;
   auto status = Stat(object_id, info);
   if (!status.ok()) {
@@ -269,8 +272,8 @@ grpc::Status ReplicatedClient::Get(const std::string& object_id,
       return {grpc::StatusCode::DATA_LOSS, "MGM returned the wrong chunk"};
     }
     v1::ReadChunkResponse response;
-    status = ReadReplicas(location, std::min<std::uint64_t>(kChunkSize, remaining),
-                          response);
+    status = ReadReplicas(
+        location, std::min<std::uint64_t>(kChunkSize, remaining), response);
     if (!status.ok()) {
       return status;
     }
@@ -294,8 +297,8 @@ grpc::Status ReplicatedClient::Remove(const std::string& object_id) {
   grpc::Status failure;
   google::protobuf::Empty empty;
   for (const auto& node : info.targets()) {
-    auto stub = v1::FstService::NewStub(
-        grpc::CreateChannel(node.endpoint(), grpc::InsecureChannelCredentials()));
+    auto stub = v1::FstService::NewStub(grpc::CreateChannel(
+        node.endpoint(), grpc::InsecureChannelCredentials()));
     grpc::ClientContext context;
     Deadline(context);
     status = stub->DeleteObject(&context, request, &empty);

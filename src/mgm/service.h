@@ -14,7 +14,8 @@ inline constexpr std::size_t kReplicationFactor = 3;
 
 class MgmService final : public v1::MgmService::Service {
  public:
-  grpc::Status RegisterNode(grpc::ServerContext*, const v1::RegisterNodeRequest*,
+  grpc::Status RegisterNode(grpc::ServerContext*,
+                            const v1::RegisterNodeRequest*,
                             v1::RegisterNodeResponse*) override;
   grpc::Status Put(grpc::ServerContext*, const v1::PutRequest*,
                    v1::PutResponse*) override;
