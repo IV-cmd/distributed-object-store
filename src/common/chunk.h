@@ -8,7 +8,7 @@
 
 namespace objectstore {
 
-inline constexpr std::size_t kChunkSize = 1024 * 1024;
+inline constexpr std::size_t kChunkSize = std::size_t{1024} * 1024;
 
 std::uint64_t Checksum(std::string_view bytes);
 bool VerifyChecksum(std::string_view bytes, std::uint64_t expected);
