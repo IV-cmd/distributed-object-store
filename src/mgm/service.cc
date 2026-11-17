@@ -243,8 +243,8 @@ grpc::Status MgmService::CompleteFile(grpc::ServerContext*,
     return {StatusCode::NOT_FOUND, "file not found"};
   }
   auto& record = file->second;
-  const std::size_t copies =
-      record.info.layout() == v1::RS42 ? 1 : kReplicationFactor;
+  constexpr auto replicas = static_cast<int>(kReplicationFactor);
+  const auto copies = record.info.layout() == v1::RS42 ? 1 : replicas;
   if (record.chunks.size() != record.info.chunk_count() ||
       std::any_of(record.chunks.begin(), record.chunks.end(),
                   [this, copies](const auto& item) {
