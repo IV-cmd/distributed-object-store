@@ -8,8 +8,8 @@
 namespace objectstore {
 
 HeartbeatSender::HeartbeatSender(FstService& service, v1::NodeInfo node,
-                                   const std::shared_ptr<grpc::Channel>& channel,
-                                   std::chrono::milliseconds interval)
+                                 const std::shared_ptr<grpc::Channel>& channel,
+                                 std::chrono::milliseconds interval)
     : service_(service),
       node_(std::move(node)),
       stub_(v1::MgmService::NewStub(channel)),
@@ -45,7 +45,8 @@ void HeartbeatSender::Run(std::stop_token stop) {
         grpc::ClientContext report_context;
         report_context.set_deadline(std::chrono::system_clock::now() +
                                     std::chrono::seconds(3));
-        const auto reported = stub_->ReportChunkStatus(&report_context, inventory, &empty);
+        const auto reported =
+            stub_->ReportChunkStatus(&report_context, inventory, &empty);
         if (!reported.ok()) {
           Log("inventory_failed", "node=" + node_.node_id() + " code=" +
                                       std::to_string(reported.error_code()));
@@ -55,7 +56,8 @@ void HeartbeatSender::Run(std::stop_token stop) {
                                     std::to_string(status.error_code()));
       }
     } catch (const std::exception& error) {
-      Log("heartbeat_failed", "node=" + node_.node_id() + " error=" + error.what());
+      Log("heartbeat_failed",
+          "node=" + node_.node_id() + " error=" + error.what());
     }
     std::unique_lock lock(mutex_);
     wake_.wait_for(lock, stop, interval_, [] { return false; });

@@ -13,16 +13,16 @@ std::vector<std::string> ExpiredNodes(const std::vector<NodeWatch>& nodes,
                                       std::chrono::milliseconds timeout) {
   std::vector<std::string> expired;
   for (const auto& node : nodes) {
-    if (node.info.state() != v1::DOWN &&
-        now - node.last_heartbeat >= timeout) {
+    if (node.info.state() != v1::DOWN && now - node.last_heartbeat >= timeout) {
       expired.push_back(node.info.node_id());
     }
   }
   return expired;
 }
 
-std::vector<RepairTask> DecideRepairs(const std::vector<v1::FileMetadata>& files,
-                                      const std::vector<v1::NodeInfo>& nodes) {
+std::vector<RepairTask> DecideRepairs(
+    const std::vector<v1::FileMetadata>& files,
+    const std::vector<v1::NodeInfo>& nodes) {
   std::vector<RepairTask> tasks;
   for (const auto& file : files) {
     if (!file.complete()) {
@@ -33,18 +33,19 @@ std::vector<RepairTask> DecideRepairs(const std::vector<v1::FileMetadata>& files
         continue;
       }
       const auto& known = chunk.known_replicas().empty()
-                              ? chunk.replicas() : chunk.known_replicas();
+                              ? chunk.replicas()
+                              : chunk.known_replicas();
       std::set<std::string> holders;
       std::set<std::string> invalid(chunk.invalid_replicas().begin(),
-                                     chunk.invalid_replicas().end());
+                                    chunk.invalid_replicas().end());
       std::vector<v1::NodeInfo> sources;
       for (const auto& replica : known) {
         holders.insert(replica.node_id());
-        const auto live = std::find_if(nodes.begin(), nodes.end(),
-                                       [&](const auto& node) {
-                                         return node.node_id() == replica.node_id() &&
-                                                node.state() == v1::UP;
-                                       });
+        const auto live =
+            std::find_if(nodes.begin(), nodes.end(), [&](const auto& node) {
+              return node.node_id() == replica.node_id() &&
+                     node.state() == v1::UP;
+            });
         if (live != nodes.end() && !invalid.contains(replica.node_id())) {
           sources.push_back(*live);
         }

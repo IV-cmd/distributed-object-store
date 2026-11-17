@@ -7,8 +7,8 @@
 #include <mutex>
 #include <string>
 
-#include "objectstore.grpc.pb.h"
 #include "mgm/recovery.h"
+#include "objectstore.grpc.pb.h"
 
 namespace objectstore {
 
@@ -16,8 +16,9 @@ inline constexpr std::size_t kReplicationFactor = 3;
 
 class MgmService final : public v1::MgmService::Service {
  public:
-  explicit MgmService(std::chrono::milliseconds timeout =
-                          std::chrono::milliseconds(6000)) : timeout_(timeout) {}
+  explicit MgmService(
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(6000))
+      : timeout_(timeout) {}
   void Maintain(HealthClock::time_point now = HealthClock::now());
 
   grpc::Status RegisterNode(grpc::ServerContext*,
@@ -43,8 +44,8 @@ class MgmService final : public v1::MgmService::Service {
                           google::protobuf::Empty*) override;
 
   grpc::Status ReportChunkStatus(grpc::ServerContext*,
-                                  const v1::ReportChunkStatusRequest*,
-                                  google::protobuf::Empty*) override;
+                                 const v1::ReportChunkStatusRequest*,
+                                 google::protobuf::Empty*) override;
   grpc::Status Heartbeat(grpc::ServerContext*, const v1::HeartbeatRequest*,
                          v1::HeartbeatResponse*) override;
   grpc::Status ListNodes(grpc::ServerContext*, const google::protobuf::Empty*,

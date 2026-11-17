@@ -62,8 +62,8 @@ int main(int argc, char* argv[]) {
       status = client.Nodes(nodes);
       if (status.ok()) {
         for (const auto& node : nodes.nodes()) {
-          std::cout << "node_id=" << node.node_id()
-                    << " state=" << objectstore::v1::NodeState_Name(node.state())
+          std::cout << "node_id=" << node.node_id() << " state="
+                    << objectstore::v1::NodeState_Name(node.state())
                     << " chunks=" << node.chunk_count()
                     << " free_bytes=" << node.free_bytes() << '\n';
         }

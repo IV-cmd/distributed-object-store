@@ -26,10 +26,10 @@ that three copies exist: inspect `replicas` and the file's `complete` flag.
 it sorts by node ID/endpoint, ignores empty identities and duplicate IDs or
 endpoints, and returns up to the requested number. It makes no RPCs and reads no
 globals. MGM rejects allocation with `RESOURCE_EXHAUSTED` unless it gets three.
-The input is the registered set, not a health-checked set.
+The input is the UP set; DOWN and REJOINING nodes are excluded.
 
-The first allocation pins the sorted first three nodes for the entire file;
-each subsequent `AllocateChunk` returns that trio. This deliberately preserves
+The first allocation pins three UP nodes for the original upload;
+each subsequent `AllocateChunk` returns that trio. Repair can add new targets. This deliberately preserves
 the FST's existing whole-file manifest/finish contract: each chosen node must
 hold every chunk. It is not round-robin load balancing; with more than three
 registered nodes, later nodes are not selected. Capacity is not a placement rule.
@@ -99,23 +99,19 @@ deleted copies are not restored and the retained map can describe stale copies.
 
 ## Limits and verification
 
-MGM restart loses all file metadata **and its registry**. Persistent FST volumes
-do not reconstruct that namespace. FSTs register once at startup (bounded wait
-for MGM); there are no periodic heartbeats, leases, failure detection, automatic
-re-registration after MGM restart, re-replication, or repair. A killed node stays
-listed; successful fallback does not change its metadata or restore redundancy.
-MGM itself remains a single dependency for reads and writes.
+MGM restart loses all file metadata. Heartbeats restore node registrations, not
+the namespace. UP/DOWN detection, bounded node-to-node repair, and inventory
+reconciliation are described in [recovery](recovery.md). `known_replicas` retains
+historical holders; `replicas` reports current eligible copies. A rejoin may leave
+more than three verified copies; there is no rebalance or excess-copy trimming.
 
-No metadata journal, filesystem sync guarantee, quorum protocol, transaction
-rollback, erasure coding, rack awareness, scrubber, or authentication is present.
-Metadata/list responses are unpaged unary messages, so large namespaces/files
-can hit gRPC response limits; no scalability claims are made. Separate Compose
-volumes on one host are not independent disks or machine-failure isolation.
+Metadata remains unpaged and in-memory; there is no fsync guarantee, distributed
+transaction, orphan cleanup, scrubber, erasure coding, TLS, or authentication.
+Failed uploads remain incomplete until removed; repair does not finish them.
+Separate Compose volumes on one host are not independent failure domains.
 
-`tests/placement_test.cc` tests the pure policy. `tests/metadata_test.cc` tests
-allocation/commit/location and completion rules. `tests/replication_test.cc`
-starts real gRPC MGM/FST servers, with test-only injected failures, to exercise
-boundary sizes, every single-node loss, corruption, mismatched but self-consistent
-responses, partial writes, and failed deletes. `scripts/smoke.sh` additionally
-kills actual Compose containers, checks `cmp`/`md5sum`, and flips a disk byte.
-MD5 is only an external round-trip comparison, not the store's integrity scheme.
+Placement/metadata tests cover policy and lifecycle. Repair tests cover verified
+copying, corrupt-source fallback, inventory reconciliation, and stale acknowledgements
+after file reuse or target restart. `scripts/smoke.sh` exercises the actual
+four-node stop/start path, a second failure during repair, and `cmp`/`md5sum`.
+MD5 is only a comparison tool, not the store's checksum scheme.

@@ -1,9 +1,9 @@
+#include "mgm/recovery.h"
+
 #include <gtest/gtest.h>
 
 #include <chrono>
 #include <vector>
-
-#include "mgm/recovery.h"
 
 namespace objectstore {
 namespace {
@@ -37,16 +37,17 @@ TEST(RecoveryTest, TimeoutBoundaryIsDeterministicAndDownIsNotRepeated) {
   const std::vector<NodeWatch> nodes{{Node("a"), start},
                                      {Node("b", v1::DOWN), start}};
   EXPECT_TRUE(ExpiredNodes(nodes, start + std::chrono::milliseconds(5999),
-                           std::chrono::milliseconds(6000)).empty());
+                           std::chrono::milliseconds(6000))
+                  .empty());
   EXPECT_EQ(ExpiredNodes(nodes, start + std::chrono::milliseconds(6000),
                          std::chrono::milliseconds(6000)),
             std::vector<std::string>{"a"});
 }
 
 TEST(RecoveryTest, ReplacesDownHolderWithDistinctUpSpare) {
-  const auto tasks = DecideRepairs({File()},
-      {Node("a"), Node("b", v1::DOWN), Node("c"), Node("d"),
-       Node("e", v1::DOWN)});
+  const auto tasks =
+      DecideRepairs({File()}, {Node("a"), Node("b", v1::DOWN), Node("c"),
+                               Node("d"), Node("e", v1::DOWN)});
   ASSERT_EQ(tasks.size(), 1);
   EXPECT_EQ(tasks[0].target.node_id(), "d");
   ASSERT_EQ(tasks[0].sources.size(), 2);
@@ -56,30 +57,34 @@ TEST(RecoveryTest, ReplacesDownHolderWithDistinctUpSpare) {
 }
 
 TEST(RecoveryTest, DoesNotInventTargetsWhenOnlyTwoHealthyHoldersExist) {
-  EXPECT_TRUE(DecideRepairs({File()},
-      {Node("a"), Node("b", v1::DOWN), Node("c")}).empty());
+  EXPECT_TRUE(
+      DecideRepairs({File()}, {Node("a"), Node("b", v1::DOWN), Node("c")})
+          .empty());
 }
 
 TEST(RecoveryTest, DoesNotCopyFromDownOrUnverifiedRejoiningNodes) {
-  EXPECT_TRUE(DecideRepairs({File()},
-      {Node("a", v1::DOWN), Node("b", v1::REJOINING),
-       Node("c", v1::DOWN), Node("d")}).empty());
+  EXPECT_TRUE(
+      DecideRepairs({File()}, {Node("a", v1::DOWN), Node("b", v1::REJOINING),
+                               Node("c", v1::DOWN), Node("d")})
+          .empty());
 }
 
 TEST(RecoveryTest, SkipsCompleteReplicationAndUnfinishedUploads) {
-  EXPECT_TRUE(DecideRepairs({File()},
-      {Node("a"), Node("b"), Node("c"), Node("d")}).empty());
+  EXPECT_TRUE(
+      DecideRepairs({File()}, {Node("a"), Node("b"), Node("c"), Node("d")})
+          .empty());
   auto file = File();
   file.set_complete(false);
-  EXPECT_TRUE(DecideRepairs({file},
-      {Node("a"), Node("b", v1::DOWN), Node("c"), Node("d")}).empty());
+  EXPECT_TRUE(DecideRepairs({file}, {Node("a"), Node("b", v1::DOWN), Node("c"),
+                                     Node("d")})
+                  .empty());
 }
 
 TEST(RecoveryTest, ExcludesQuarantinedCopiesFromSources) {
   auto file = File();
   file.mutable_chunks(0)->add_invalid_replicas("a");
-  const auto tasks = DecideRepairs({file},
-      {Node("a"), Node("b", v1::DOWN), Node("c"), Node("d")});
+  const auto tasks = DecideRepairs(
+      {file}, {Node("a"), Node("b", v1::DOWN), Node("c"), Node("d")});
   ASSERT_EQ(tasks.size(), 1);
   ASSERT_EQ(tasks[0].sources.size(), 1);
   EXPECT_EQ(tasks[0].sources[0].node_id(), "c");

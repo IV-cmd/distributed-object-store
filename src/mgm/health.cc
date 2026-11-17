@@ -1,10 +1,9 @@
-#include "mgm/service.h"
-
 #include <map>
 #include <set>
 #include <utility>
 
 #include "common/log.h"
+#include "mgm/service.h"
 
 namespace objectstore {
 
@@ -15,12 +14,15 @@ grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
   if (node.node_id().empty() || node.node_id().size() > 128 ||
       node.node_id().find_first_not_of(
           "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") !=
-          std::string::npos || node.endpoint().empty()) {
-    return {grpc::StatusCode::INVALID_ARGUMENT, "valid node ID and endpoint required"};
+          std::string::npos ||
+      node.endpoint().empty()) {
+    return {grpc::StatusCode::INVALID_ARGUMENT,
+            "valid node ID and endpoint required"};
   }
   const std::lock_guard lock(mutex_);
   for (const auto& [id, existing] : nodes_) {
-    if ((id == node.node_id()) != (existing.info.endpoint() == node.endpoint())) {
+    if ((id == node.node_id()) !=
+        (existing.info.endpoint() == node.endpoint())) {
       return {grpc::StatusCode::ALREADY_EXISTS,
               "node IDs and endpoints must be unique and stable"};
     }
@@ -33,7 +35,8 @@ grpc::Status MgmService::RegisterNode(grpc::ServerContext*,
   record.info.set_state(inserted ? v1::UP : v1::REJOINING);
   record.last_heartbeat = std::chrono::steady_clock::now();
   response->set_accepted(true);
-  Log(inserted ? "node_registered" : "node_rejoining", "node=" + node.node_id() + " endpoint=" + node.endpoint());
+  Log(inserted ? "node_registered" : "node_rejoining",
+      "node=" + node.node_id() + " endpoint=" + node.endpoint());
   return grpc::Status::OK;
 }
 
@@ -84,13 +87,16 @@ grpc::Status MgmService::ReportChunkStatus(
   if (record.info.state() != v1::REJOINING ||
       record.info.incarnation() != request->incarnation() ||
       record.info.endpoint() != request->endpoint()) {
-    return {grpc::StatusCode::FAILED_PRECONDITION, "inventory request is stale"};
+    return {grpc::StatusCode::FAILED_PRECONDITION,
+            "inventory request is stale"};
   }
   using Key = std::pair<std::string, std::uint32_t>;
   std::map<Key, const v1::ChunkStatus*> reported;
   for (const auto& chunk : request->chunks()) {
-    if (!reported.emplace(Key{chunk.chunk().object_id(), chunk.chunk().index()},
-                          &chunk).second) {
+    if (!reported
+             .emplace(Key{chunk.chunk().object_id(), chunk.chunk().index()},
+                      &chunk)
+             .second) {
       return {grpc::StatusCode::INVALID_ARGUMENT, "duplicate inventory entry"};
     }
   }
@@ -115,8 +121,8 @@ grpc::Status MgmService::ReportChunkStatus(
         const auto found = reported.find(key);
         const bool absent = found == reported.end() ||
                             found->second->state() == v1::ChunkStatus::MISSING;
-        const bool valid = !absent &&
-            found->second->state() == v1::ChunkStatus::HEALTHY &&
+        const bool valid =
+            !absent && found->second->state() == v1::ChunkStatus::HEALTHY &&
             found->second->checksum() == chunk.checksum() &&
             found->second->size_bytes() == file.info.size_bytes();
         auto invalid = chunk.invalid_replicas();
@@ -144,16 +150,18 @@ grpc::Status MgmService::ReportChunkStatus(
   for (const auto& [key, chunk] : reported) {
     if (!expected.contains(key)) {
       ++unexpected;
-      Log("unexpected_chunk", "node=" + request->node_id() + " object=" +
-                                  key.first + " chunk=" + std::to_string(key.second));
+      Log("unexpected_chunk", "node=" + request->node_id() +
+                                  " object=" + key.first +
+                                  " chunk=" + std::to_string(key.second));
     }
   }
   record.info.set_state(v1::UP);
   record.last_heartbeat = HealthClock::now();
-  Log("node_up", "node=" + request->node_id() + " verified=" +
-        std::to_string(verified) + " missing=" + std::to_string(missing) +
-        " corrupt=" + std::to_string(corrupt) + " unexpected=" +
-        std::to_string(unexpected));
+  Log("node_up", "node=" + request->node_id() +
+                     " verified=" + std::to_string(verified) +
+                     " missing=" + std::to_string(missing) +
+                     " corrupt=" + std::to_string(corrupt) +
+                     " unexpected=" + std::to_string(unexpected));
   return grpc::Status::OK;
 }
 

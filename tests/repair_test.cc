@@ -33,7 +33,8 @@ class BlockingTarget final : public v1::FstService::Service {
   }
   bool Entered() {
     std::unique_lock lock(mutex_);
-    return wake_.wait_for(lock, std::chrono::seconds(5), [&] { return entered_; });
+    return wake_.wait_for(lock, std::chrono::seconds(5),
+                          [&] { return entered_; });
   }
   void Release() {
     const std::lock_guard lock(mutex_);
@@ -41,8 +42,8 @@ class BlockingTarget final : public v1::FstService::Service {
     wake_.notify_all();
   }
   grpc::Status InstallChunk(grpc::ServerContext* context,
-                             const v1::InstallChunkRequest* request,
-                             google::protobuf::Empty* response) override {
+                            const v1::InstallChunkRequest* request,
+                            google::protobuf::Empty* response) override {
     {
       std::unique_lock lock(mutex_);
       entered_ = true;
@@ -52,13 +53,13 @@ class BlockingTarget final : public v1::FstService::Service {
     return store_.InstallChunk(context, request, response);
   }
   grpc::Status ReadChunk(grpc::ServerContext* context,
-                          const v1::ReadChunkRequest* request,
-                          v1::ReadChunkResponse* response) override {
+                         const v1::ReadChunkRequest* request,
+                         v1::ReadChunkResponse* response) override {
     return store_.ReadChunk(context, request, response);
   }
   grpc::Status CopyChunk(grpc::ServerContext* context,
-                          const v1::CopyChunkRequest* request,
-                          google::protobuf::Empty* response) override {
+                         const v1::CopyChunkRequest* request,
+                         google::protobuf::Empty* response) override {
     return store_.CopyChunk(context, request, response);
   }
 
@@ -74,21 +75,24 @@ class RepairTest : public testing::Test {
  protected:
   void SetUp() override {
     root_ = fs::temp_directory_path() /
-        ("objectstore-repair-" + std::to_string(
-             HealthClock::now().time_since_epoch().count()));
+            ("objectstore-repair-" +
+             std::to_string(HealthClock::now().time_since_epoch().count()));
     fs::create_directories(root_);
     int port = 0;
     grpc::ServerBuilder manager;
-    manager.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(), &port);
+    manager.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(),
+                             &port);
     manager.RegisterService(&mgm_);
     manager_ = manager.BuildAndStart();
     ASSERT_NE(manager_, nullptr);
-    client_ = std::make_unique<ReplicatedClient>(grpc::CreateChannel(
-        "127.0.0.1:" + std::to_string(port), grpc::InsecureChannelCredentials()));
+    client_ = std::make_unique<ReplicatedClient>(
+        grpc::CreateChannel("127.0.0.1:" + std::to_string(port),
+                            grpc::InsecureChannelCredentials()));
     for (std::size_t index = 0; index < stores_.size(); ++index) {
       stores_[index] = std::make_unique<FstService>(Dir(index));
       grpc::ServerBuilder builder;
-      builder.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(), &port);
+      builder.AddListeningPort("127.0.0.1:0", grpc::InsecureServerCredentials(),
+                               &port);
       if (index == 3) {
         target_ = std::make_unique<BlockingTarget>(*stores_[index]);
         builder.RegisterService(target_.get());
@@ -132,7 +136,8 @@ class RepairTest : public testing::Test {
   }
   static std::string Read(const fs::path& path) {
     std::ifstream file(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    return {std::istreambuf_iterator<char>(file),
+            std::istreambuf_iterator<char>()};
   }
   void Put(std::size_t size = 17) {
     bytes_.assign(size, 'x');
@@ -178,7 +183,8 @@ class RepairTest : public testing::Test {
   std::unique_ptr<ReplicatedClient> client_;
 };
 
-TEST_F(RepairTest, RepairsToSpareAndReconcilesCorruptMissingAndUnexpectedCopies) {
+TEST_F(RepairTest,
+       RepairsToSpareAndReconcilesCorruptMissingAndUnexpectedCopies) {
   Put(2 * kChunkSize + 7);
   LoseSecondNode();
   for (int index = 0; index < 3; ++index) {
@@ -195,7 +201,8 @@ TEST_F(RepairTest, RepairsToSpareAndReconcilesCorruptMissingAndUnexpectedCopies)
   Write(Dir(1) / "sample" / "0.chunk", damaged);
   fs::remove(Dir(1) / "sample" / "1.chunk");
   fs::remove(Dir(1) / "sample" / "1.crc");
-  fs::copy(Dir(1) / "sample", Dir(1) / "unexpected", fs::copy_options::recursive);
+  fs::copy(Dir(1) / "sample", Dir(1) / "unexpected",
+           fs::copy_options::recursive);
   Rejoin(1);
   info = Stat();
   EXPECT_EQ(info.chunks(0).replicas_size(), 3);

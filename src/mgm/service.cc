@@ -30,14 +30,15 @@ v1::ChunkMetadata MgmService::LiveChunk(const v1::ChunkMetadata& chunk) const {
   result.clear_replicas();
   result.clear_known_replicas();
   const std::set<std::string> invalid(chunk.invalid_replicas().begin(),
-                                       chunk.invalid_replicas().end());
+                                      chunk.invalid_replicas().end());
   for (const auto& holder : chunk.replicas()) {
     const auto node = nodes_.find(holder.node_id());
     if (node == nodes_.end()) {
       continue;
     }
     *result.add_known_replicas() = node->second.info;
-    if (node->second.info.state() == v1::UP && !invalid.contains(holder.node_id())) {
+    if (node->second.info.state() == v1::UP &&
+        !invalid.contains(holder.node_id())) {
       *result.add_replicas() = node->second.info;
     }
   }
@@ -222,11 +223,11 @@ grpc::Status MgmService::CompleteFile(grpc::ServerContext*,
   }
   auto& record = file->second;
   if (record.chunks.size() != record.info.chunk_count() ||
-      std::any_of(record.chunks.begin(), record.chunks.end(),
-                  [this](const auto& item) {
-                    return !item.second.committed() ||
-                           LiveChunk(item.second).replicas_size() != kReplicationFactor;
-                  })) {
+      std::any_of(
+          record.chunks.begin(), record.chunks.end(), [this](const auto& item) {
+            return !item.second.committed() ||
+                   LiveChunk(item.second).replicas_size() != kReplicationFactor;
+          })) {
     return {StatusCode::FAILED_PRECONDITION, "file is not fully replicated"};
   }
   record.info.set_complete(true);

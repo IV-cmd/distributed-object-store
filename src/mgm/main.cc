@@ -20,7 +20,8 @@ int main(int argc, char* argv[]) {
     const std::string address = argc == 2 ? argv[1] : "127.0.0.1:50051";
     objectstore::MgmService service(
         objectstore::EnvMilliseconds("HEARTBEAT_TIMEOUT_MS", 6000));
-    const auto interval = objectstore::EnvMilliseconds("REPAIR_INTERVAL_MS", 500);
+    const auto interval =
+        objectstore::EnvMilliseconds("REPAIR_INTERVAL_MS", 500);
     grpc::ServerBuilder builder;
     builder.AddListeningPort(address, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);

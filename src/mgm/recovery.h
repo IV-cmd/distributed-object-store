@@ -26,7 +26,8 @@ struct RepairTask {
 std::vector<std::string> ExpiredNodes(const std::vector<NodeWatch>& nodes,
                                       HealthClock::time_point now,
                                       std::chrono::milliseconds timeout);
-std::vector<RepairTask> DecideRepairs(const std::vector<v1::FileMetadata>& files,
-                                      const std::vector<v1::NodeInfo>& nodes);
+std::vector<RepairTask> DecideRepairs(
+    const std::vector<v1::FileMetadata>& files,
+    const std::vector<v1::NodeInfo>& nodes);
 
 }  // namespace objectstore

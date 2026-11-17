@@ -28,9 +28,10 @@ class FstService final : public v1::FstService::Service {
                            google::protobuf::Empty*) override;
 
   grpc::Status CopyChunk(grpc::ServerContext*, const v1::CopyChunkRequest*,
-                          google::protobuf::Empty*) override;
-  grpc::Status InstallChunk(grpc::ServerContext*, const v1::InstallChunkRequest*,
-                             google::protobuf::Empty*) override;
+                         google::protobuf::Empty*) override;
+  grpc::Status InstallChunk(grpc::ServerContext*,
+                            const v1::InstallChunkRequest*,
+                            google::protobuf::Empty*) override;
 
   v1::ReportChunkStatusRequest Inventory();
   void FillHeartbeat(v1::HeartbeatRequest& request);

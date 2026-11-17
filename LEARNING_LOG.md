@@ -40,3 +40,16 @@ Owner reflection sections above remain blank.
 - Automatic CI runs one GCC/test/format job for code changes. Slower compiler,
   static-analysis, and Compose checks are selected manually; docs-only pushes
   do not rebuild the store.
+
+### Recovery engineering observations
+
+- Whole-file manifests cannot publish one repaired chunk independently. Targets
+  use a separate sparse-repair marker; pending uploads remain protected.
+- A heartbeat alone cannot prove returning disk contents. Incarnation-bound
+  inventories distinguish valid, missing, corrupt, and unexpected copies.
+- RPCs run outside the metadata mutex. File generations and target incarnations
+  fence late copy acknowledgements after file reuse or node restart.
+- Quarantined source copies do not count toward RF. One dead node plus another
+  corrupt holder can leave only two verified copies with four registered nodes.
+- Format differences were found by Actions; its exact formatter diff was applied.
+  Owner reflection sections remain blank.

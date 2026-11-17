@@ -11,7 +11,8 @@ empty files live only in MGM metadata, without FST directories.
 <data_dir>/
   <object_id>/
     pending          # Uploading; renamed to manifest on successful finish
-    manifest         # Completed object; never coexists with pending normally
+    manifest         # Completed original upload
+    repair           # Sparse repaired object: only verified installed chunks readable
     0.chunk          # Raw binary bytes, no header
     0.crc            # xxHash64 of exactly 0.chunk, despite the .crc extension
     1.chunk
@@ -22,7 +23,7 @@ Object IDs contain 1-128 ASCII letters, digits, underscores or hyphens. No
 slashes or dots are accepted. Chunk indices are zero-based unsigned 32-bit
 integers; manifests contain at most UINT32_MAX chunks.
 
-Both `pending` and `manifest` use the same ASCII format:
+`pending`, `manifest`, and `repair` use the same ASCII size/count format:
 
 ```text
 <size_bytes> <chunk_count>\n
@@ -120,5 +121,14 @@ The CLI prints the numeric RPC status and message and returns nonzero.
 - Manifests are validated but not checksummed. There are no versioned schemas,
   upload sessions, quotas, garbage collection, or partial-upload cleanup daemon.
 - See [replication protocol](replication.md) for MGM ownership and fallback. No
-  erasure coding, failure detection, scrubber, repair, TLS, or authentication.
+  erasure coding, scrubber, TLS, or authentication. Failure recovery is described
+  in [recovery](recovery.md).
   The network is for trusted local development.
+
+## Repaired chunks
+
+A `repair` marker does not claim that every expected chunk exists. `ReadChunk`
+can serve each verified installed pair independently; whole-object
+`GetObjectInfo` still requires an original completed manifest. `InstallChunk`
+rejects pending upload directories. Sparse repair publication never makes an
+unfinished original upload readable.

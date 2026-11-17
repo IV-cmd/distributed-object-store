@@ -212,8 +212,9 @@ grpc::Status FstService::ReadChunk(grpc::ServerContext*,
   return Run([&] {
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
-    const auto bytes = ReadVerified(dir, id, LoadInfo(dir, fs::exists(dir / "manifest")
-                                                   ? "manifest" : "repair"));
+    const auto bytes = ReadVerified(
+        dir, id,
+        LoadInfo(dir, fs::exists(dir / "manifest") ? "manifest" : "repair"));
     response->set_data(bytes);
     response->set_checksum(Checksum(bytes));
   });
@@ -226,7 +227,8 @@ grpc::Status FstService::DeleteChunk(grpc::ServerContext*,
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
     const auto info = LoadInfo(dir, fs::exists(dir / "manifest") ? "manifest"
-                         : fs::exists(dir / "repair") ? "repair" : "pending");
+                                    : fs::exists(dir / "repair") ? "repair"
+                                                                 : "pending");
     ExpectedSize(info, id.index());
     const bool removed = fs::remove(ChunkPath(dir, id.index()));
     const bool crc_removed = fs::remove(ChecksumPath(dir, id.index()));
@@ -235,8 +237,8 @@ grpc::Status FstService::DeleteChunk(grpc::ServerContext*,
 }
 
 grpc::Status FstService::InstallChunk(grpc::ServerContext*,
-                                        const v1::InstallChunkRequest* request,
-                                        google::protobuf::Empty*) {
+                                      const v1::InstallChunkRequest* request,
+                                      google::protobuf::Empty*) {
   return Run([&] {
     const auto& write = request->write();
     const auto& id = write.chunk();
@@ -251,11 +253,11 @@ grpc::Status FstService::InstallChunk(grpc::ServerContext*,
     info.set_chunk_count(static_cast<std::uint32_t>(count));
     Require(write.data().size() == ExpectedSize(info, id.index()),
             StatusCode::INVALID_ARGUMENT, "invalid repair chunk length");
-    Require(VerifyChecksum(write.data(), write.checksum()), StatusCode::DATA_LOSS,
-            "CHECKSUM_MISMATCH: rejected repair bytes");
+    Require(VerifyChecksum(write.data(), write.checksum()),
+            StatusCode::DATA_LOSS, "CHECKSUM_MISMATCH: rejected repair bytes");
     if (fs::exists(dir / "manifest") || fs::exists(dir / "repair")) {
-      const auto existing = LoadInfo(dir, fs::exists(dir / "manifest")
-                                             ? "manifest" : "repair");
+      const auto existing =
+          LoadInfo(dir, fs::exists(dir / "manifest") ? "manifest" : "repair");
       Require(existing.size_bytes() == info.size_bytes(),
               StatusCode::ALREADY_EXISTS, "repair object has a different size");
     } else {
@@ -288,8 +290,8 @@ grpc::Status FstService::CopyChunk(grpc::ServerContext*,
   const auto status = Run([&] {
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
-    const auto info = LoadInfo(dir, fs::exists(dir / "manifest")
-                                       ? "manifest" : "repair");
+    const auto info =
+        LoadInfo(dir, fs::exists(dir / "manifest") ? "manifest" : "repair");
     Require(info.size_bytes() == request->size_bytes(), StatusCode::DATA_LOSS,
             "source object size disagrees with MGM");
     const auto bytes = ReadVerified(dir, id, info);
@@ -310,7 +312,8 @@ grpc::Status FstService::CopyChunk(grpc::ServerContext*,
   auto target = v1::FstService::NewStub(grpc::CreateChannel(
       request->target().endpoint(), grpc::InsecureChannelCredentials()));
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(3));
+  context.set_deadline(std::chrono::system_clock::now() +
+                       std::chrono::seconds(3));
   google::protobuf::Empty empty;
   return target->InstallChunk(&context, install, &empty);
 }
@@ -328,7 +331,8 @@ v1::ReportChunkStatusRequest FstService::Inventory() {
       }
       const auto stem = entry.path().stem().string();
       std::uint32_t index = 0;
-      const auto parsed = std::from_chars(stem.data(), stem.data() + stem.size(), index);
+      const auto parsed =
+          std::from_chars(stem.data(), stem.data() + stem.size(), index);
       if (parsed.ec != std::errc{} || parsed.ptr != stem.data() + stem.size()) {
         continue;
       }
@@ -336,8 +340,9 @@ v1::ReportChunkStatusRequest FstService::Inventory() {
       chunk->mutable_chunk()->set_object_id(object.path().filename().string());
       chunk->mutable_chunk()->set_index(index);
       try {
-        const auto info = LoadInfo(object.path(), fs::exists(object.path() / "manifest")
-                                                    ? "manifest" : "repair");
+        const auto info = LoadInfo(
+            object.path(),
+            fs::exists(object.path() / "manifest") ? "manifest" : "repair");
         const auto bytes = ReadVerified(object.path(), chunk->chunk(), info);
         chunk->set_state(v1::ChunkStatus::HEALTHY);
         chunk->set_checksum(Checksum(bytes));
