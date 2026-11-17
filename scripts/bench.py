@@ -36,8 +36,14 @@ def environment(cluster):
             "repair_interval_ms": int(cluster.env.get("REPAIR_INTERVAL_MS", "500"))}
 
 
-def measure(cluster, samples, phase, operation, *args):
-    row = json.loads(cluster.client("bench", operation, *args).stdout)
+def measure(cluster, samples, phase, operation, *args, layout="replica3"):
+    response = cluster.client("bench", operation, *args)
+    row = json.loads(response.stdout)
+    row["layout"] = layout
+    row["reconstructed"] = "RS reconstructed stripe=" in response.stderr
+    if layout == "rs42" and operation == "get":
+        if row["reconstructed"] != (phase == "latency-degraded"):
+            raise RuntimeError("Unexpected RS read path during measurement")
     if (row["operation"] != operation or row["bytes"] <= 0
             or not math.isfinite(row["seconds"]) or row["seconds"] <= 0):
         raise RuntimeError(f"Invalid client measurement: {row}")
@@ -48,44 +54,69 @@ def measure(cluster, samples, phase, operation, *args):
 
 def summary(result):
     samples = result["samples"]
-    lines = ["## Measured benchmarks", "", "| Object | RF=3 write MB/s | Healthy read MB/s |",
-             "|---|---:|---:|"]
+    lines = ["## Measured benchmarks", "",
+             "| Object | replica3 write MB/s | rs42 write MB/s | replica3 read MB/s | rs42 read MB/s |",
+             "|---|---:|---:|---:|---:|"]
     for mib in (1, 16, 64):
         rates = [statistics.median(row["MB_per_s"] for row in samples
-                                   if row["phase"] == "throughput"
+                                   if row["phase"] == "throughput" and row["layout"] == layout
                                    and row["operation"] == operation and row["bytes"] == mib * MIB)
-                 for operation in ("put", "get")]
-        lines.append(f"| {mib} MiB | {rates[0]:.2f} | {rates[1]:.2f} |")
-    lines += ["", "| 16 MiB reads | Median latency |", "|---|---:|"]
-    for phase, label in [("latency-healthy", "Three healthy holders"),
-                         ("latency-degraded", "One holder DOWN; RF=2; spare not started")]:
-        milliseconds = statistics.median(row["seconds"] for row in samples
-                                         if row["phase"] == phase) * 1000
-        lines.append(f"| {label} | {milliseconds:.2f} ms |")
+                 for operation in ("put", "get") for layout in ("replica3", "rs42")]
+        lines.append(f"| {mib} MiB | " + " | ".join(f"{rate:.2f}" for rate in rates) + " |")
+    lines += ["", "| 16 MiB read | Healthy | One holder DOWN; no spare |", "|---|---:|---:|"]
+    for layout in ("replica3", "rs42"):
+        milliseconds = [statistics.median(row["seconds"] for row in samples
+                                          if row["layout"] == layout and row["phase"] == phase) * 1000
+                        for phase in ("latency-healthy", "latency-degraded")]
+        lines.append(f"| {layout} | {milliseconds[0]:.2f} ms | {milliseconds[1]:.2f} ms |")
+    lines += ["", "| Object | replica3 payload/file | rs42 payload/file |", "|---|---:|---:|"]
+    for mib in (1, 16, 64):
+        ratios = [next(row["payload_bytes"] / row["object_bytes"] for row in result["storage"]
+                       if row["layout"] == layout and row["object_bytes"] == mib * MIB)
+                  for layout in ("replica3", "rs42")]
+        lines.append(f"| {mib} MiB | {ratios[0]:.3f}x | {ratios[1]:.3f}x |")
     rebuild = result["rebuild"]
-    lines += ["", "| 64 MiB rebuild | Time |", "|---|---:|",
+    lines += ["", "| replica3 64 MiB rebuild | Time |", "|---|---:|",
               f"| Kill request to DOWN | {rebuild['kill_to_down_s']:.3f} s |",
               f"| DOWN to RF=3 | {rebuild['down_to_rf3_s']:.3f} s |",
               f"| Kill request to RF=3 | {rebuild['kill_to_rf3_s']:.3f} s |"]
     return "\n".join(lines) + "\n"
 
 
+def throughput(cluster, samples, storage, layout):
+    for mib in (1, 16, 64):
+        source = cluster.payload(mib)
+        for trial in range(TRIALS):
+            object_id = f"throughput-{mib}-{trial}"
+            for operation, args in [("put", (source, object_id, layout)),
+                                     ("get", (object_id, "/tmp/throughput-output"))]:
+                row = measure(cluster, samples, "throughput", operation, *args, layout=layout)
+                if row["bytes"] != mib * MIB:
+                    raise RuntimeError(f"Wrong sample size: {row}")
+            cluster.compare(source, "/tmp/throughput-output")
+            if trial == 0:
+                payload = total = 0
+                for node in cluster.nodes:
+                    files = cluster.compose("exec", "-T", node, "find",
+                                            "/var/lib/objectstore/" + object_id,
+                                            "-type", "f", "-printf", "%f %s\n").stdout
+                    for line in files.splitlines():
+                        name, length = line.rsplit(" ", 1)
+                        total += int(length)
+                        if name.endswith(".chunk"):
+                            payload += int(length)
+                storage.append({"layout": layout, "object_bytes": mib * MIB,
+                                "payload_bytes": payload, "marker_and_checksum_bytes": total - payload})
+            cluster.client("rm", object_id)
+        print(f"Measured {layout} {mib} MiB put/get ({TRIALS} trials)", flush=True)
+
+
 def main():
-    samples = []
+    samples, storage = [], []
     with Cluster("bench", nodes=3) as cluster:
         host = environment(cluster)
-        for mib in (1, 16, 64):
-            source = cluster.payload(mib)
-            for trial in range(TRIALS):
-                object_id = f"throughput-{mib}-{trial}"
-                for operation, args in [("put", (source, object_id)),
-                                         ("get", (object_id, "/tmp/throughput-output"))]:
-                    row = measure(cluster, samples, "throughput", operation, *args)
-                    if row["bytes"] != mib * MIB:
-                        raise RuntimeError(f"Wrong sample size: {row}")
-                cluster.compare(source, "/tmp/throughput-output")
-                cluster.client("rm", object_id)
-            print(f"Measured {mib} MiB put/get ({TRIALS} trials)", flush=True)
+        directory = cluster.directory
+        throughput(cluster, samples, storage, "replica3")
 
         source = cluster.payload(16)
         cluster.client("put", source, "latency")
@@ -135,17 +166,47 @@ def main():
                             "excludes Docker/process startup; decimal MB/s, binary MiB sizes. "
                             "Degraded latency is post-DOWN with no spare started, not timeout cost. "
                             "Rebuild uses same-host millisecond MGM log timestamps.",
-                  "samples": samples, "degraded_node_states": degraded_nodes,
+                  "samples": samples, "degraded_node_states": {"replica3": degraded_nodes},
                   "rebuild": {"object_bytes": 64 * MIB, "chunks": 64,
                               "kill_requested_ms": kill_ms, "down_ms": down,
                               "rf3_ms": restored, "kill_to_down_s": (down - kill_ms) / 1000,
                               "down_to_rf3_s": (restored - down) / 1000,
                               "kill_to_rf3_s": (restored - kill_ms) / 1000},
                   "events": events}
-        cluster.save("benchmark.json", result)
-        (cluster.directory / "summary.md").write_text(summary(result))
-        print(summary(result), flush=True)
-        print("PASS bench: all samples verified; known-volume rebuild completed", flush=True)
+
+    with Cluster("bench-rs", nodes=6) as cluster:
+        throughput(cluster, samples, storage, "rs42")
+        source = cluster.payload(16)
+        cluster.client("put", source, "latency", "rs42")
+        cluster.wait_rs("latency", 24)
+        cluster.read_seconds("latency", source)
+        for _ in range(TRIALS):
+            measure(cluster, samples, "latency-healthy", "get", "latency", "/tmp/latency-output", layout="rs42")
+            cluster.compare(source, "/tmp/latency-output")
+        cluster.compose("stop", "-t", "1", "fst2")
+        cluster.wait_node("fst2", "DOWN")
+        cluster.wait_rs("latency", 24, missing=(1,))
+        result["degraded_node_states"]["rs42"] = cluster.client("nodes").stdout
+        for _ in range(TRIALS):
+            measure(cluster, samples, "latency-degraded", "get", "latency", "/tmp/latency-output", layout="rs42")
+            cluster.compare(source, "/tmp/latency-output")
+
+    result["method"] = ("Single client; sequential replica3 or rs42 writes; 4 MiB RS stripes, "
+                        "at most 1 MiB per fragment; warm OS cache, no fsync. "
+                        "Client steady-clock Put/Get timer includes codec, file I/O and RPCs, "
+                        "excludes Docker/process startup; decimal MB/s, binary MiB sizes. "
+                        "Three initial replica3 holders or six rs42 holders on one host. "
+                        "Degraded latency is one holder post-DOWN with no spare, not timeout cost; "
+                        "RS reconstruction asserted in every degraded sample. "
+                        "Storage sums actual .chunk file lengths; marker/checksum byte lengths "
+                        "recorded separately; filesystem block allocation is not measured. "
+                        "Synthetic repeating bytes 0..255; replica3 measured before rs42. "
+                        "Rebuild is replica3 only, using same-host millisecond MGM log timestamps.")
+    result["storage"] = storage
+    (directory / "benchmark.json").write_text(json.dumps(result, indent=2) + "\n")
+    (directory / "summary.md").write_text(summary(result))
+    print(summary(result), flush=True)
+    print("PASS bench: both layouts, verified reconstruction, measured storage and RF=3 rebuild", flush=True)
 
 
 if __name__ == "__main__":
