@@ -63,6 +63,7 @@ class MgmService final : public v1::MgmService::Service {
 
   std::chrono::milliseconds timeout_;
   std::uint64_t next_generation_ = 0;
+  std::size_t repair_cursor_ = 0;
   std::mutex maintenance_mutex_;
 
   std::mutex mutex_;

@@ -21,6 +21,8 @@ service MgmService {
 }
 
 service FstService {
+  rpc CopyChunk(CopyChunkRequest) returns (google.protobuf.Empty);
+  rpc InstallChunk(InstallChunkRequest) returns (google.protobuf.Empty);
   rpc BeginObject(BeginObjectRequest) returns (google.protobuf.Empty);
   rpc FinishObject(ObjectRequest) returns (google.protobuf.Empty);
   rpc GetObjectInfo(ObjectRequest) returns (ObjectInfo);
@@ -188,4 +190,16 @@ message FileMetadata {
 
 message FileList {
   repeated FileMetadata files = 1;
+}
+
+message CopyChunkRequest {
+  ChunkId chunk = 1;
+  NodeInfo target = 2;
+  fixed64 checksum = 3;
+  uint64 size_bytes = 4;
+}
+
+message InstallChunkRequest {
+  WriteChunkRequest write = 1;
+  uint64 size_bytes = 2;
 }

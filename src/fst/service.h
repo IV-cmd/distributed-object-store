@@ -27,6 +27,11 @@ class FstService final : public v1::FstService::Service {
   grpc::Status DeleteChunk(grpc::ServerContext*, const v1::DeleteChunkRequest*,
                            google::protobuf::Empty*) override;
 
+  grpc::Status CopyChunk(grpc::ServerContext*, const v1::CopyChunkRequest*,
+                          google::protobuf::Empty*) override;
+  grpc::Status InstallChunk(grpc::ServerContext*, const v1::InstallChunkRequest*,
+                             google::protobuf::Empty*) override;
+
   void FillHeartbeat(v1::HeartbeatRequest& request);
 
  private:

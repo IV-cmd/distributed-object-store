@@ -33,13 +33,13 @@ jobs:
           sudo apt-get install -y g++ clang-format-18 cmake ninja-build \
             libgrpc++-dev libprotobuf-dev protobuf-compiler \
             protobuf-compiler-grpc libgtest-dev libxxhash-dev
-      - name: Check format
-        run: |
-          git ls-files -z '*.cc' '*.h' | xargs -0 clang-format-18 -i
-          git diff --exit-code
       - name: Configure and build
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
           cmake --build build --parallel 2
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Check format
+        run: |
+          git ls-files -z '*.cc' '*.h' | xargs -0 clang-format-18 -i
+          git diff --exit-code

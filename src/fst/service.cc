@@ -1,6 +1,9 @@
 #include "fst/service.h"
 
+#include <grpcpp/grpcpp.h>
+
 #include <charconv>
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -46,9 +49,9 @@ void WriteFile(const fs::path& path, std::string_view bytes) {
   output.close();
 }
 
-v1::ObjectInfo LoadInfo(const fs::path& dir, bool pending = false) {
+v1::ObjectInfo LoadInfo(const fs::path& dir, const char* state = "manifest") {
   Require(fs::exists(dir), StatusCode::NOT_FOUND, "object not found");
-  const auto path = dir / (pending ? "pending" : "manifest");
+  const auto path = dir / state;
   Require(fs::exists(path), StatusCode::FAILED_PRECONDITION,
           "object is not in the required upload state");
   std::istringstream input(ReadFile(path, 64));
@@ -150,7 +153,7 @@ grpc::Status FstService::FinishObject(grpc::ServerContext*,
                                       google::protobuf::Empty*) {
   return Run([&] {
     const auto dir = ObjectDir(request->object_id());
-    const auto info = LoadInfo(dir, true);
+    const auto info = LoadInfo(dir, "pending");
     v1::ChunkId id;
     id.set_object_id(request->object_id());
     for (std::uint32_t i = 0; i < info.chunk_count(); ++i) {
@@ -184,7 +187,7 @@ grpc::Status FstService::WriteChunk(grpc::ServerContext*,
     const auto dir = ObjectDir(id.object_id());
     Require(!fs::exists(dir / "manifest"), StatusCode::ALREADY_EXISTS,
             "completed objects are write-once");
-    const auto info = LoadInfo(dir, true);
+    const auto info = LoadInfo(dir, "pending");
     Require(request->data().size() == ExpectedSize(info, id.index()),
             StatusCode::INVALID_ARGUMENT, "chunk length does not match object");
     Require(VerifyChecksum(request->data(), request->checksum()),
@@ -209,7 +212,8 @@ grpc::Status FstService::ReadChunk(grpc::ServerContext*,
   return Run([&] {
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
-    const auto bytes = ReadVerified(dir, id, LoadInfo(dir));
+    const auto bytes = ReadVerified(dir, id, LoadInfo(dir, fs::exists(dir / "manifest")
+                                                   ? "manifest" : "repair"));
     response->set_data(bytes);
     response->set_checksum(Checksum(bytes));
   });
@@ -221,12 +225,94 @@ grpc::Status FstService::DeleteChunk(grpc::ServerContext*,
   return Run([&] {
     const auto& id = request->chunk();
     const auto dir = ObjectDir(id.object_id());
-    const auto info = LoadInfo(dir, !fs::exists(dir / "manifest"));
+    const auto info = LoadInfo(dir, fs::exists(dir / "manifest") ? "manifest"
+                         : fs::exists(dir / "repair") ? "repair" : "pending");
     ExpectedSize(info, id.index());
     const bool removed = fs::remove(ChunkPath(dir, id.index()));
     const bool crc_removed = fs::remove(ChecksumPath(dir, id.index()));
     Require(removed || crc_removed, StatusCode::NOT_FOUND, "chunk not found");
   });
+}
+
+grpc::Status FstService::InstallChunk(grpc::ServerContext*,
+                                        const v1::InstallChunkRequest* request,
+                                        google::protobuf::Empty*) {
+  return Run([&] {
+    const auto& write = request->write();
+    const auto& id = write.chunk();
+    const auto dir = ObjectDir(id.object_id());
+    Require(!fs::exists(dir / "pending"), StatusCode::FAILED_PRECONDITION,
+            "repair cannot modify an unfinished upload");
+    v1::ObjectInfo info;
+    info.set_size_bytes(request->size_bytes());
+    const auto count = ChunkCount(request->size_bytes());
+    Require(count <= std::numeric_limits<std::uint32_t>::max(),
+            StatusCode::INVALID_ARGUMENT, "object exceeds chunk-index limit");
+    info.set_chunk_count(static_cast<std::uint32_t>(count));
+    Require(write.data().size() == ExpectedSize(info, id.index()),
+            StatusCode::INVALID_ARGUMENT, "invalid repair chunk length");
+    Require(VerifyChecksum(write.data(), write.checksum()), StatusCode::DATA_LOSS,
+            "CHECKSUM_MISMATCH: rejected repair bytes");
+    if (fs::exists(dir / "manifest") || fs::exists(dir / "repair")) {
+      const auto existing = LoadInfo(dir, fs::exists(dir / "manifest")
+                                             ? "manifest" : "repair");
+      Require(existing.size_bytes() == info.size_bytes(),
+              StatusCode::ALREADY_EXISTS, "repair object has a different size");
+    } else {
+      fs::create_directories(dir);
+      WriteFile(dir / "repair", std::to_string(info.size_bytes()) + " " +
+                                    std::to_string(info.chunk_count()) + "\n");
+    }
+    if (fs::exists(ChunkPath(dir, id.index())) &&
+        fs::exists(ChecksumPath(dir, id.index()))) {
+      Require(ReadVerified(dir, id, info) == write.data(),
+              StatusCode::ALREADY_EXISTS, "repair would replace existing data");
+      return;
+    }
+    std::ostringstream digest;
+    digest << std::hex << std::setfill('0') << std::setw(16) << write.checksum()
+           << '\n';
+    WriteFile(dir / "chunk.tmp", write.data());
+    WriteFile(dir / "crc.tmp", digest.str());
+    fs::rename(dir / "chunk.tmp", ChunkPath(dir, id.index()));
+    fs::rename(dir / "crc.tmp", ChecksumPath(dir, id.index()));
+    Require(ReadVerified(dir, id, info) == write.data(), StatusCode::DATA_LOSS,
+            "CHECKSUM_MISMATCH: repair readback failed");
+  });
+}
+
+grpc::Status FstService::CopyChunk(grpc::ServerContext*,
+                                   const v1::CopyChunkRequest* request,
+                                   google::protobuf::Empty*) {
+  v1::InstallChunkRequest install;
+  const auto status = Run([&] {
+    const auto& id = request->chunk();
+    const auto dir = ObjectDir(id.object_id());
+    const auto info = LoadInfo(dir, fs::exists(dir / "manifest")
+                                       ? "manifest" : "repair");
+    Require(info.size_bytes() == request->size_bytes(), StatusCode::DATA_LOSS,
+            "source object size disagrees with MGM");
+    const auto bytes = ReadVerified(dir, id, info);
+    Require(VerifyChecksum(bytes, request->checksum()), StatusCode::DATA_LOSS,
+            "source checksum disagrees with MGM");
+    install.set_size_bytes(info.size_bytes());
+    auto* write = install.mutable_write();
+    *write->mutable_chunk() = id;
+    write->set_data(bytes);
+    write->set_checksum(request->checksum());
+  });
+  if (!status.ok()) {
+    return {status.error_code(), "SOURCE_CORRUPT: " + status.error_message()};
+  }
+  if (request->target().endpoint().empty()) {
+    return {StatusCode::INVALID_ARGUMENT, "copy target is required"};
+  }
+  auto target = v1::FstService::NewStub(grpc::CreateChannel(
+      request->target().endpoint(), grpc::InsecureChannelCredentials()));
+  grpc::ClientContext context;
+  context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(3));
+  google::protobuf::Empty empty;
+  return target->InstallChunk(&context, install, &empty);
 }
 
 void FstService::FillHeartbeat(v1::HeartbeatRequest& request) {
