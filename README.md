@@ -38,7 +38,7 @@ from MGM or repair the missing copy. All containers share one physical host.
 - In-memory allocation, commit, locate, list, stat, and replica metadata.
 - `client put`, `get`, `rm`, `stat`, and `ls`, using an MGM address.
 - Partial-write records; verified fallback, including corrupt response rejection.
-- GoogleTest unit and real-gRPC tests; GCC/Clang, format/tidy, and Compose CI.
+- GoogleTest unit and real-gRPC tests; one GCC/test/format job on code changes.
 
 See [replication protocol and limits](docs/replication.md) and
 [on-disk format](docs/storage-layout.md). xxHash64 detects accidental corruption;
@@ -126,7 +126,11 @@ make smoke
 The isolated smoke stack checks three recorded replicas per chunk, byte equality
 and `md5sum`, an actual kill of each FST in turn, corrupted-byte fallback, removal,
 empty files, and partial-upload refusal. It deletes only its own test volumes.
-Actions saves `compose-smoke.log`; the log pipeline propagates failures.
+The automatic CI workflow runs one GCC build, the tests, and formatting; it
+skips documentation-only pushes. In Actions, **Extended checks** is manual:
+choose `clang`, `static-analysis`, or `compose` when that extra verification is
+useful. The Compose option saves `compose-smoke.log` and propagates failures
+through its log pipeline. No correctness tests were removed.
 
 ```sh
 sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18

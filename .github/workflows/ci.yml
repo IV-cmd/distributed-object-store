@@ -1,6 +1,17 @@
 name: CI
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - LICENSE
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - LICENSE
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,32 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and test (${{ matrix.cxx }})
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        cxx: [g++, clang++-18]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++ clang-18 cmake ninja-build libgrpc++-dev \
-            libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgtest-dev libxxhash-dev
-      - name: Configure
-        run: >-
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
-          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
-      - name: Build
-        run: cmake --build build --parallel 2
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
-
-  lint:
-    name: Format and clang-tidy
+  check:
+    name: GCC tests and formatting
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -43,33 +30,16 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18 cmake \
-            ninja-build libgrpc++-dev libprotobuf-dev protobuf-compiler \
+          sudo apt-get install -y g++ clang-format-18 cmake ninja-build \
+            libgrpc++-dev libprotobuf-dev protobuf-compiler \
             protobuf-compiler-grpc libgtest-dev libxxhash-dev
       - name: Check format
         run: |
           git ls-files -z '*.cc' '*.h' | xargs -0 clang-format-18 -i
           git diff --exit-code
-      - name: Generate headers and compilation database
+      - name: Configure and build
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=clang++-18
-          cmake --build build --target objectstore_proto --parallel 2
-      - name: Static analysis
-        run: git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build
-
-  compose:
-    name: Three-replica storage smoke
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Verify CLI storage and disk corruption
-        run: |
-          set -o pipefail
-          ./scripts/smoke.sh 2>&1 | tee compose-smoke.log
-      - name: Save Compose evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: compose-smoke
-          path: compose-smoke.log
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

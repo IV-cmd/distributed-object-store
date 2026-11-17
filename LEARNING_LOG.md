@@ -34,3 +34,9 @@ Owner reflection sections above remain blank.
   trio instead of distributing different chunks to different node subsets.
 - A partial write records acknowledged replicas but does not publish the file;
   checksums detect corruption and fallback reads another copy, not repair it.
+- clang-tidy identified vector growth without a reservation and interchangeable
+  string parameters in a test helper. The registry snapshot reserves its size;
+  the test helper no longer needs an object-ID parameter.
+- Automatic CI runs one GCC/test/format job for code changes. Slower compiler,
+  static-analysis, and Compose checks are selected manually; docs-only pushes
+  do not rebuild the store.

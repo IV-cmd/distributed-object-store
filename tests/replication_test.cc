@@ -158,9 +158,9 @@ class ReplicationTest : public testing::Test {
             std::istreambuf_iterator<char>()};
   }
 
-  void Put(const std::string& bytes, const std::string& id = "sample") {
+  void Put(const std::string& bytes) {
     Write(root_ / "input", bytes);
-    ASSERT_TRUE(client_->Put(root_ / "input", id).ok());
+    ASSERT_TRUE(client_->Put(root_ / "input", "sample").ok());
   }
 
   fs::path root_;
@@ -175,9 +175,9 @@ class ReplicationTest : public testing::Test {
 TEST_F(ReplicationTest, BoundarySizesRoundTripAndRecordThreeReplicasPerChunk) {
   for (const auto size :
        {std::size_t{0}, std::size_t{17}, kChunkSize, 2 * kChunkSize + 7}) {
-    const auto id = "file-" + std::to_string(size);
+    const std::string id = "sample";
     const auto bytes = Bytes(size);
-    Put(bytes, id);
+    Put(bytes);
     v1::FileMetadata info;
     ASSERT_TRUE(client_->Stat(id, info).ok());
     EXPECT_TRUE(info.complete());

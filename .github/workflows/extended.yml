@@ -1,0 +1,58 @@
+name: Extended checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      check:
+        description: Optional check to run
+        type: choice
+        required: true
+        default: static-analysis
+        options:
+          - static-analysis
+          - clang
+          - compose
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Manual ${{ inputs.check }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        if: inputs.check != 'compose'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 clang-tidy-18 cmake ninja-build \
+            libgrpc++-dev libprotobuf-dev protobuf-compiler \
+            protobuf-compiler-grpc libgtest-dev libxxhash-dev
+      - name: Configure
+        if: inputs.check != 'compose'
+        run: >-
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_COMPILER=clang++-18
+      - name: Clang build and tests
+        if: inputs.check == 'clang'
+        run: |
+          cmake --build build --parallel 2
+          ctest --test-dir build --output-on-failure
+      - name: Static analysis
+        if: inputs.check == 'static-analysis'
+        run: |
+          cmake --build build --target objectstore_proto --parallel 2
+          git ls-files -z '*.cc' | xargs -0 clang-tidy-18 -p build
+      - name: Three-replica Compose smoke
+        if: inputs.check == 'compose'
+        run: |
+          set -o pipefail
+          ./scripts/smoke.sh 2>&1 | tee compose-smoke.log
+      - name: Save Compose evidence
+        if: always() && inputs.check == 'compose'
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-smoke
+          path: compose-smoke.log

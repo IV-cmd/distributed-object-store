@@ -96,6 +96,7 @@ grpc::Status MgmService::AllocateChunk(grpc::ServerContext*,
   }
   if (record.info.targets().empty()) {
     std::vector<v1::NodeInfo> available;
+    available.reserve(nodes_.size());
     for (const auto& [id, node] : nodes_) {
       available.push_back(node);
     }
