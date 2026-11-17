@@ -33,9 +33,9 @@ int main(int argc, char* argv[]) {
   const std::string command = argc >= 2 ? argv[1] : "";
   if (!((command == "put" || command == "get") && argc == 4) &&
       !((command == "rm" || command == "stat") && argc == 3) &&
-      !(command == "ls" && argc == 2)) {
+      !((command == "ls" || command == "nodes") && argc == 2)) {
     std::cerr << "Usage: client put <file> <object_id> | get <object_id> "
-                 "<out_file> | rm <object_id> | stat <object_id> | ls\n"
+                 "<out_file> | rm <object_id> | stat <object_id> | ls | nodes\n"
                  "MGM_ADDRESS defaults to 127.0.0.1:50051\n";
     return 2;
   }
@@ -56,6 +56,17 @@ int main(int argc, char* argv[]) {
       status = client.Stat(argv[2], info);
       if (status.ok()) {
         Print(info);
+      }
+    } else if (command == "nodes") {
+      objectstore::v1::NodeList nodes;
+      status = client.Nodes(nodes);
+      if (status.ok()) {
+        for (const auto& node : nodes.nodes()) {
+          std::cout << "node_id=" << node.node_id()
+                    << " state=" << objectstore::v1::NodeState_Name(node.state())
+                    << " chunks=" << node.chunk_count()
+                    << " free_bytes=" << node.free_bytes() << '\n';
+        }
       }
     } else {
       objectstore::v1::FileList files;

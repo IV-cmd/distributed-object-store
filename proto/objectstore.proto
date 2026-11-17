@@ -73,6 +73,8 @@ message ChunkStatus {
   }
   ChunkId chunk = 1;
   State state = 2;
+  fixed64 checksum = 3;
+  uint64 size_bytes = 4;
 }
 
 message PutRequest {
@@ -110,6 +112,7 @@ message HeartbeatRequest {
 
 message HeartbeatResponse {
   bool report_inventory = 1;
+  uint64 incarnation = 2;
 }
 
 message NodeList {
@@ -119,6 +122,8 @@ message NodeList {
 message ReportChunkStatusRequest {
   string node_id = 1;
   repeated ChunkStatus chunks = 2;
+  string endpoint = 3;
+  uint64 incarnation = 4;
 }
 
 message WriteChunkRequest {

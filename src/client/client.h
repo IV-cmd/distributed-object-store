@@ -33,6 +33,7 @@ class ReplicatedClient {
   grpc::Status Remove(const std::string& object_id);
   grpc::Status Stat(const std::string& object_id, v1::FileMetadata& metadata);
   grpc::Status List(v1::FileList& files);
+  grpc::Status Nodes(v1::NodeList& nodes);
 
  private:
   std::unique_ptr<v1::MgmService::Stub> stub_;

@@ -28,7 +28,29 @@ void HeartbeatSender::Run(std::stop_token stop) {
       context.set_deadline(std::chrono::system_clock::now() +
                            std::chrono::seconds(2));
       const auto status = stub_->Heartbeat(&context, request, &response);
-      if (!status.ok()) {
+      if (status.error_code() == grpc::StatusCode::NOT_FOUND) {
+        v1::RegisterNodeRequest registration;
+        *registration.mutable_node() = node_;
+        v1::RegisterNodeResponse accepted;
+        grpc::ClientContext register_context;
+        register_context.set_deadline(std::chrono::system_clock::now() +
+                                      std::chrono::seconds(2));
+        stub_->RegisterNode(&register_context, registration, &accepted);
+      } else if (status.ok() && response.report_inventory()) {
+        auto inventory = service_.Inventory();
+        inventory.set_node_id(node_.node_id());
+        inventory.set_endpoint(node_.endpoint());
+        inventory.set_incarnation(response.incarnation());
+        google::protobuf::Empty empty;
+        grpc::ClientContext report_context;
+        report_context.set_deadline(std::chrono::system_clock::now() +
+                                    std::chrono::seconds(3));
+        const auto reported = stub_->ReportChunkStatus(&report_context, inventory, &empty);
+        if (!reported.ok()) {
+          Log("inventory_failed", "node=" + node_.node_id() + " code=" +
+                                      std::to_string(reported.error_code()));
+        }
+      } else if (!status.ok()) {
         Log("heartbeat_failed", "node=" + node_.node_id() + " code=" +
                                     std::to_string(status.error_code()));
       }

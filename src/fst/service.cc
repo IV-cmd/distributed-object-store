@@ -315,6 +315,45 @@ grpc::Status FstService::CopyChunk(grpc::ServerContext*,
   return target->InstallChunk(&context, install, &empty);
 }
 
+v1::ReportChunkStatusRequest FstService::Inventory() {
+  const std::lock_guard lock(mutex_);
+  v1::ReportChunkStatusRequest report;
+  for (const auto& object : fs::directory_iterator(data_dir_)) {
+    if (!object.is_directory()) {
+      continue;
+    }
+    for (const auto& entry : fs::directory_iterator(object.path())) {
+      if (!entry.is_regular_file() || entry.path().extension() != ".chunk") {
+        continue;
+      }
+      const auto stem = entry.path().stem().string();
+      std::uint32_t index = 0;
+      const auto parsed = std::from_chars(stem.data(), stem.data() + stem.size(), index);
+      if (parsed.ec != std::errc{} || parsed.ptr != stem.data() + stem.size()) {
+        continue;
+      }
+      auto* chunk = report.add_chunks();
+      chunk->mutable_chunk()->set_object_id(object.path().filename().string());
+      chunk->mutable_chunk()->set_index(index);
+      try {
+        const auto info = LoadInfo(object.path(), fs::exists(object.path() / "manifest")
+                                                    ? "manifest" : "repair");
+        const auto bytes = ReadVerified(object.path(), chunk->chunk(), info);
+        chunk->set_state(v1::ChunkStatus::HEALTHY);
+        chunk->set_checksum(Checksum(bytes));
+        chunk->set_size_bytes(info.size_bytes());
+      } catch (const RpcError&) {
+        chunk->set_state(v1::ChunkStatus::CORRUPT);
+      } catch (const fs::filesystem_error&) {
+        chunk->set_state(v1::ChunkStatus::CORRUPT);
+      } catch (const std::ios_base::failure&) {
+        chunk->set_state(v1::ChunkStatus::CORRUPT);
+      }
+    }
+  }
+  return report;
+}
+
 void FstService::FillHeartbeat(v1::HeartbeatRequest& request) {
   const std::lock_guard lock(mutex_);
   std::uint64_t count = 0;

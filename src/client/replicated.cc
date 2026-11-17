@@ -314,4 +314,11 @@ grpc::Status ReplicatedClient::Remove(const std::string& object_id) {
   return stub_->DeleteFile(&context, request, &empty);
 }
 
+grpc::Status ReplicatedClient::Nodes(v1::NodeList& nodes) {
+  google::protobuf::Empty request;
+  grpc::ClientContext context;
+  Deadline(context);
+  return stub_->ListNodes(&context, request, &nodes);
+}
+
 }  // namespace objectstore

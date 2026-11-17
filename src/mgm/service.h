@@ -42,6 +42,9 @@ class MgmService final : public v1::MgmService::Service {
   grpc::Status DeleteFile(grpc::ServerContext*, const v1::ObjectRequest*,
                           google::protobuf::Empty*) override;
 
+  grpc::Status ReportChunkStatus(grpc::ServerContext*,
+                                  const v1::ReportChunkStatusRequest*,
+                                  google::protobuf::Empty*) override;
   grpc::Status Heartbeat(grpc::ServerContext*, const v1::HeartbeatRequest*,
                          v1::HeartbeatResponse*) override;
   grpc::Status ListNodes(grpc::ServerContext*, const google::protobuf::Empty*,
