@@ -18,6 +18,15 @@ def fields(line):
     return dict(re.findall(r"(\w+)=([^\s]+)", line))
 
 
+def replicas_ready(chunks, count_chunks, replicas=3, exclude=()):
+    return (len(chunks) == count_chunks
+            and {int(chunk["chunk"]) for chunk in chunks} == set(range(count_chunks))
+            and all(int(chunk["replicas"]) == replicas
+                    and len(set(chunk.get("nodes", "").split(","))) == replicas
+                    and not set(exclude).intersection(chunk.get("nodes", "").split(","))
+                    for chunk in chunks))
+
+
 def run(args, *, env=None, check=True, timeout=60):
     result = subprocess.run(args, env=env, capture_output=True, text=True,
                             timeout=timeout)
@@ -93,14 +102,8 @@ class Cluster:
                 if line.startswith("chunk=")]
 
     def wait_replicas(self, object_id, mib, count=3, exclude=()):
-        def ready():
-            chunks = self.chunks(object_id)
-            return len(chunks) == mib and all(
-                int(chunk["replicas"]) == count
-                and len(set(chunk.get("nodes", "").split(","))) == count
-                and not set(exclude).intersection(chunk.get("nodes", "").split(","))
-                for chunk in chunks)
-        self.wait(f"{object_id} RF={count}, excluding {exclude}", ready)
+        self.wait(f"{object_id} RF={count}, excluding {exclude}",
+                  lambda: replicas_ready(self.chunks(object_id), mib, count, exclude))
 
     def payload(self, mib):
         destination = f"/tmp/input-{mib}MiB"

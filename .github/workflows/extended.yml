@@ -12,6 +12,10 @@ on:
           - static-analysis
           - clang
           - compose
+          - demo
+          - chaos
+          - bench
+          - proof
 
 permissions:
   contents: read
@@ -24,14 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        if: inputs.check != 'compose'
+        if: inputs.check == 'clang' || inputs.check == 'static-analysis'
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-18 clang-tidy-18 cmake ninja-build \
             libgrpc++-dev libprotobuf-dev protobuf-compiler \
             protobuf-compiler-grpc libgtest-dev libxxhash-dev
       - name: Configure
-        if: inputs.check != 'compose'
+        if: inputs.check == 'clang' || inputs.check == 'static-analysis'
         run: >-
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_COMPILER=clang++-18
@@ -56,3 +60,24 @@ jobs:
         with:
           name: compose-smoke
           path: compose-smoke.log
+      - name: Demo, chaos, and benchmark proof
+        if: contains(fromJSON('["demo", "chaos", "bench", "proof"]'), inputs.check)
+        env:
+          PROOF_CHECK: ${{ inputs.check }}
+        run: |
+          set -o pipefail
+          targets=("$PROOF_CHECK")
+          if [[ "$PROOF_CHECK" == proof ]]; then targets=(demo chaos bench); fi
+          for target in "${targets[@]}"; do
+            make "$target" 2>&1 | tee "$target.log"
+          done
+      - name: Save proof evidence
+        if: always() && contains(fromJSON('["demo", "chaos", "bench", "proof"]'), inputs.check)
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-${{ inputs.check }}
+          path: |
+            .proof-results/
+            demo.log
+            chaos.log
+            bench.log

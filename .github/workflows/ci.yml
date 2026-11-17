@@ -39,6 +39,11 @@ jobs:
           cmake --build build --parallel 2
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Harness unit tests and syntax
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_*.py' -v
+          python3 -m compileall -q scripts
+          bash -n scripts/*.sh
       - name: Check format
         run: |
           git ls-files -z '*.cc' '*.h' | xargs -0 clang-format-18 -i
